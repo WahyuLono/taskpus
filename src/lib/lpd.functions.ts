@@ -152,15 +152,14 @@ export const updateLpdStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => UpdateStatusSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {
-      status_lpd: data.status,
-      updated_at: new Date().toISOString(),
-    };
-    if (data.hasil_kegiatan !== undefined) patch.hasil_kegiatan = data.hasil_kegiatan;
-    if (data.status === "Batal") patch.deleted_at = new Date().toISOString();
     const { error } = await context.supabase
       .from("transaksi_lpd")
-      .update(patch)
+      .update({
+        status_lpd: data.status,
+        updated_at: new Date().toISOString(),
+        ...(data.hasil_kegiatan !== undefined ? { hasil_kegiatan: data.hasil_kegiatan } : {}),
+        ...(data.status === "Batal" ? { deleted_at: new Date().toISOString() } : {}),
+      })
       .eq("id_lpd", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
