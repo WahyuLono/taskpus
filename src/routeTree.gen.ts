@@ -16,6 +16,7 @@ import { Route as AuthenticatedTugasRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMasterIndexRouteImport } from './routes/_authenticated/master.index'
 import { Route as AuthenticatedLpdIndexRouteImport } from './routes/_authenticated/lpd.index'
+import { Route as AuthenticatedMasterUserRouteImport } from './routes/_authenticated/master.user'
 import { Route as AuthenticatedMasterTempatRouteImport } from './routes/_authenticated/master.tempat'
 import { Route as AuthenticatedMasterRangkaRouteImport } from './routes/_authenticated/master.rangka'
 import { Route as AuthenticatedMasterGolonganRouteImport } from './routes/_authenticated/master.golongan'
@@ -57,6 +58,11 @@ const AuthenticatedLpdIndexRoute = AuthenticatedLpdIndexRouteImport.update({
   path: '/lpd/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMasterUserRoute = AuthenticatedMasterUserRouteImport.update({
+  id: '/master/user',
+  path: '/master/user',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedMasterTempatRoute =
   AuthenticatedMasterTempatRouteImport.update({
     id: '/master/tempat',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
+  '/master/user': typeof AuthenticatedMasterUserRoute
   '/lpd/': typeof AuthenticatedLpdIndexRoute
   '/master/': typeof AuthenticatedMasterIndexRoute
 }
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
+  '/master/user': typeof AuthenticatedMasterUserRoute
   '/lpd': typeof AuthenticatedLpdIndexRoute
   '/master': typeof AuthenticatedMasterIndexRoute
 }
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/_authenticated/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/_authenticated/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/_authenticated/master/tempat': typeof AuthenticatedMasterTempatRoute
+  '/_authenticated/master/user': typeof AuthenticatedMasterUserRoute
   '/_authenticated/lpd/': typeof AuthenticatedLpdIndexRoute
   '/_authenticated/master/': typeof AuthenticatedMasterIndexRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/master/golongan'
     | '/master/rangka'
     | '/master/tempat'
+    | '/master/user'
     | '/lpd/'
     | '/master/'
   fileRoutesByTo: FileRoutesByTo
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/master/golongan'
     | '/master/rangka'
     | '/master/tempat'
+    | '/master/user'
     | '/lpd'
     | '/master'
   id:
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/_authenticated/master/golongan'
     | '/_authenticated/master/rangka'
     | '/_authenticated/master/tempat'
+    | '/_authenticated/master/user'
     | '/_authenticated/lpd/'
     | '/_authenticated/master/'
   fileRoutesById: FileRoutesById
@@ -227,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLpdIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/master/user': {
+      id: '/_authenticated/master/user'
+      path: '/master/user'
+      fullPath: '/master/user'
+      preLoaderRoute: typeof AuthenticatedMasterUserRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/master/tempat': {
       id: '/_authenticated/master/tempat'
       path: '/master/tempat'
@@ -273,6 +292,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMasterGolonganRoute: typeof AuthenticatedMasterGolonganRoute
   AuthenticatedMasterRangkaRoute: typeof AuthenticatedMasterRangkaRoute
   AuthenticatedMasterTempatRoute: typeof AuthenticatedMasterTempatRoute
+  AuthenticatedMasterUserRoute: typeof AuthenticatedMasterUserRoute
   AuthenticatedLpdIndexRoute: typeof AuthenticatedLpdIndexRoute
   AuthenticatedMasterIndexRoute: typeof AuthenticatedMasterIndexRoute
 }
@@ -285,6 +305,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMasterGolonganRoute: AuthenticatedMasterGolonganRoute,
   AuthenticatedMasterRangkaRoute: AuthenticatedMasterRangkaRoute,
   AuthenticatedMasterTempatRoute: AuthenticatedMasterTempatRoute,
+  AuthenticatedMasterUserRoute: AuthenticatedMasterUserRoute,
   AuthenticatedLpdIndexRoute: AuthenticatedLpdIndexRoute,
   AuthenticatedMasterIndexRoute: AuthenticatedMasterIndexRoute,
 }
@@ -301,3 +322,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
