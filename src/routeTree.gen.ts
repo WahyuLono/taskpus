@@ -14,7 +14,11 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTugasRouteImport } from './routes/_authenticated/tugas'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedMasterIndexRouteImport } from './routes/_authenticated/master.index'
 import { Route as AuthenticatedLpdIndexRouteImport } from './routes/_authenticated/lpd.index'
+import { Route as AuthenticatedMasterTempatRouteImport } from './routes/_authenticated/master.tempat'
+import { Route as AuthenticatedMasterRangkaRouteImport } from './routes/_authenticated/master.rangka'
+import { Route as AuthenticatedMasterGolonganRouteImport } from './routes/_authenticated/master.golongan'
 import { Route as AuthenticatedLpdBaruRouteImport } from './routes/_authenticated/lpd.baru'
 import { Route as AuthenticatedLpdIdRouteImport } from './routes/_authenticated/lpd.$id'
 
@@ -42,11 +46,35 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMasterIndexRoute =
+  AuthenticatedMasterIndexRouteImport.update({
+    id: '/master/',
+    path: '/master/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedLpdIndexRoute = AuthenticatedLpdIndexRouteImport.update({
   id: '/lpd/',
   path: '/lpd/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMasterTempatRoute =
+  AuthenticatedMasterTempatRouteImport.update({
+    id: '/master/tempat',
+    path: '/master/tempat',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMasterRangkaRoute =
+  AuthenticatedMasterRangkaRouteImport.update({
+    id: '/master/rangka',
+    path: '/master/rangka',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMasterGolonganRoute =
+  AuthenticatedMasterGolonganRouteImport.update({
+    id: '/master/golongan',
+    path: '/master/golongan',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedLpdBaruRoute = AuthenticatedLpdBaruRouteImport.update({
   id: '/lpd/baru',
   path: '/lpd/baru',
@@ -65,7 +93,11 @@ export interface FileRoutesByFullPath {
   '/tugas': typeof AuthenticatedTugasRoute
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
+  '/master/golongan': typeof AuthenticatedMasterGolonganRoute
+  '/master/rangka': typeof AuthenticatedMasterRangkaRoute
+  '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/lpd/': typeof AuthenticatedLpdIndexRoute
+  '/master/': typeof AuthenticatedMasterIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -74,7 +106,11 @@ export interface FileRoutesByTo {
   '/tugas': typeof AuthenticatedTugasRoute
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
+  '/master/golongan': typeof AuthenticatedMasterGolonganRoute
+  '/master/rangka': typeof AuthenticatedMasterRangkaRoute
+  '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/lpd': typeof AuthenticatedLpdIndexRoute
+  '/master': typeof AuthenticatedMasterIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,7 +121,11 @@ export interface FileRoutesById {
   '/_authenticated/tugas': typeof AuthenticatedTugasRoute
   '/_authenticated/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/_authenticated/lpd/baru': typeof AuthenticatedLpdBaruRoute
+  '/_authenticated/master/golongan': typeof AuthenticatedMasterGolonganRoute
+  '/_authenticated/master/rangka': typeof AuthenticatedMasterRangkaRoute
+  '/_authenticated/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/_authenticated/lpd/': typeof AuthenticatedLpdIndexRoute
+  '/_authenticated/master/': typeof AuthenticatedMasterIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,7 +136,11 @@ export interface FileRouteTypes {
     | '/tugas'
     | '/lpd/$id'
     | '/lpd/baru'
+    | '/master/golongan'
+    | '/master/rangka'
+    | '/master/tempat'
     | '/lpd/'
+    | '/master/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -105,7 +149,11 @@ export interface FileRouteTypes {
     | '/tugas'
     | '/lpd/$id'
     | '/lpd/baru'
+    | '/master/golongan'
+    | '/master/rangka'
+    | '/master/tempat'
     | '/lpd'
+    | '/master'
   id:
     | '__root__'
     | '/'
@@ -115,7 +163,11 @@ export interface FileRouteTypes {
     | '/_authenticated/tugas'
     | '/_authenticated/lpd/$id'
     | '/_authenticated/lpd/baru'
+    | '/_authenticated/master/golongan'
+    | '/_authenticated/master/rangka'
+    | '/_authenticated/master/tempat'
     | '/_authenticated/lpd/'
+    | '/_authenticated/master/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -161,11 +213,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/master/': {
+      id: '/_authenticated/master/'
+      path: '/master'
+      fullPath: '/master/'
+      preLoaderRoute: typeof AuthenticatedMasterIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/lpd/': {
       id: '/_authenticated/lpd/'
       path: '/lpd'
       fullPath: '/lpd/'
       preLoaderRoute: typeof AuthenticatedLpdIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/master/tempat': {
+      id: '/_authenticated/master/tempat'
+      path: '/master/tempat'
+      fullPath: '/master/tempat'
+      preLoaderRoute: typeof AuthenticatedMasterTempatRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/master/rangka': {
+      id: '/_authenticated/master/rangka'
+      path: '/master/rangka'
+      fullPath: '/master/rangka'
+      preLoaderRoute: typeof AuthenticatedMasterRangkaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/master/golongan': {
+      id: '/_authenticated/master/golongan'
+      path: '/master/golongan'
+      fullPath: '/master/golongan'
+      preLoaderRoute: typeof AuthenticatedMasterGolonganRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/lpd/baru': {
@@ -190,7 +270,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTugasRoute: typeof AuthenticatedTugasRoute
   AuthenticatedLpdIdRoute: typeof AuthenticatedLpdIdRoute
   AuthenticatedLpdBaruRoute: typeof AuthenticatedLpdBaruRoute
+  AuthenticatedMasterGolonganRoute: typeof AuthenticatedMasterGolonganRoute
+  AuthenticatedMasterRangkaRoute: typeof AuthenticatedMasterRangkaRoute
+  AuthenticatedMasterTempatRoute: typeof AuthenticatedMasterTempatRoute
   AuthenticatedLpdIndexRoute: typeof AuthenticatedLpdIndexRoute
+  AuthenticatedMasterIndexRoute: typeof AuthenticatedMasterIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -198,7 +282,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTugasRoute: AuthenticatedTugasRoute,
   AuthenticatedLpdIdRoute: AuthenticatedLpdIdRoute,
   AuthenticatedLpdBaruRoute: AuthenticatedLpdBaruRoute,
+  AuthenticatedMasterGolonganRoute: AuthenticatedMasterGolonganRoute,
+  AuthenticatedMasterRangkaRoute: AuthenticatedMasterRangkaRoute,
+  AuthenticatedMasterTempatRoute: AuthenticatedMasterTempatRoute,
   AuthenticatedLpdIndexRoute: AuthenticatedLpdIndexRoute,
+  AuthenticatedMasterIndexRoute: AuthenticatedMasterIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -213,3 +301,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
