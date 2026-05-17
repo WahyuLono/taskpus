@@ -74,12 +74,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "TASKPUS — Manajemen LPD" },
+      { title: "TASKPUS" },
       {
         name: "description",
         content:
           "TASKPUS — aplikasi manajemen Surat Perintah Tugas dan Laporan Perjalanan Dinas.",
       },
+      { property: "og:title", content: "TASKPUS" },
+      { name: "twitter:title", content: "TASKPUS" },
+      { name: "description", content: "Task Pus: LPD Manager is a web application for managing official travel reports (LPD)." },
+      { property: "og:description", content: "Task Pus: LPD Manager is a web application for managing official travel reports (LPD)." },
+      { name: "twitter:description", content: "Task Pus: LPD Manager is a web application for managing official travel reports (LPD)." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1c251473-1c93-4c5b-bac4-f64251243cc7/id-preview-c75a60e0--27bf0ac9-8162-470a-9247-a213db63f31a.lovable.app-1778998434096.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1c251473-1c93-4c5b-bac4-f64251243cc7/id-preview-c75a60e0--27bf0ac9-8162-470a-9247-a213db63f31a.lovable.app-1778998434096.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
