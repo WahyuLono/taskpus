@@ -35,6 +35,7 @@ const NAV: NavItem[] = [
   { to: "/lpd", icon: "description", label: "Daftar LPD" },
   { to: "/lpd/baru", icon: "add_circle", label: "Buat SPT", adminOnly: true },
   { to: "/tugas", icon: "assignment_ind", label: "Tugas Saya" },
+  { to: "/master", icon: "database", label: "Data Master", adminOnly: true },
 ];
 
 function AuthLayout() {
@@ -183,9 +184,14 @@ function AuthLayout() {
 function PageTitle({ pathname }: { pathname: string }) {
   const map: Record<string, string> = {
     "/dashboard": "Dashboard",
-    "/lpd": "Daftar LPD",
     "/lpd/baru": "Buat Surat Perintah Tugas",
+    "/lpd": "Daftar LPD",
     "/tugas": "Tugas Saya",
+    "/master/golongan": "Data Master · Golongan",
+    "/master/rangka": "Data Master · Rangka Kegiatan",
+    "/master/tempat": "Data Master · Tempat Tujuan",
+    "/master/user": "Data Master · User Pegawai",
+    "/master": "Data Master",
   };
   const title =
     Object.entries(map).find(([k]) => pathname === k || pathname.startsWith(k + "/"))?.[1] ??
