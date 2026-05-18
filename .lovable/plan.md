@@ -1,84 +1,48 @@
+## Masalah
 
-# Modul Data Master — Pusat Kendali Admin
+Saat Admin membuka menu Data Master, ia ditolak dan dipantulkan ke dashboard dengan toast "Halaman ini hanya untuk Admin", padahal role di tabel `master_user` sudah `Admin`.
 
-Evaluasi PRD vs implementasi sekarang: **Fase 1 sudah jalan** (auth, dashboard, LPD list/baru/detail, tugas). Yang **belum** dibangun:
+Penyebabnya bukan RLS atau data — melainkan bug pada hook guard `useRequireAdmin`:
 
-- ❌ Master Data CRUD (Golongan, Rangka, Tempat, User Pegawai)
-- ❌ Pengaturan Sistem (settings_config)
-- ❌ Halaman Cetak SPT
-- ❌ Upload Laporan (foto + kompresi)
-- ❌ Soft delete / Batal LPD
+- `useCurrentUser()` memakai `useQuery({ enabled: ready && !!userId })`.
+- Saat halaman pertama kali render, Supabase session belum siap (`ready=false`), jadi query **belum dijalankan**.
+- Pada TanStack Query v5, query yang `enabled=false` punya `isLoading === false` (bukan `true`). Akibatnya hook langsung melewati cek `if (isLoading) return` dan menyimpulkan user bukan Admin → redirect.
 
-Sesuai permintaan: kerjakan **Modul Master Data dulu** sebagai pusat kendali admin.
+## Perbaikan
 
-## Scope iterasi ini
+### 1. `src/hooks/use-require-admin.ts`
+Gunakan sinyal kesiapan yang akurat — bukan hanya `isLoading`:
+- Tunggu `ready` (session bootstrap selesai) dari `useCurrentUser`.
+- Jika `ready && !userId` → user belum login → biarkan layout `_authenticated` yang menangani redirect ke `/login` (jangan toast "bukan Admin").
+- Jika `ready && userId` tapi query masih `isPending/isFetching` → tunggu.
+- Setelah query selesai dan `me` ada → baru evaluasi `role_user !== "Admin"` dan redirect dengan toast.
 
-### Routes baru (semua di bawah `_authenticated/`, admin-only guard)
+Pseudokode:
+```ts
+const { data: me, ready, userId, isFetching, isSuccess } = useCurrentUser();
+
+useEffect(() => {
+  if (!ready) return;                  // session belum siap
+  if (!userId) return;                  // bukan masalah admin, biar layout auth handle
+  if (isFetching || !isSuccess) return; // profil belum termuat
+  if (!me || me.role_user !== "Admin") {
+    toast.error("Halaman ini hanya untuk Admin");
+    navigate({ to: "/dashboard" });
+  }
+}, [ready, userId, isFetching, isSuccess, me]);
+
+return {
+  isAdmin: me?.role_user === "Admin",
+  isLoading: !ready || (!!userId && (isFetching || !isSuccess)),
+};
 ```
-master.index.tsx       → landing master (4 kartu navigasi)
-master.golongan.tsx    → CRUD Golongan
-master.rangka.tsx      → CRUD Rangka kegiatan
-master.tempat.tsx      → CRUD Tempat tujuan
-master.user.tsx        → CRUD User Pegawai (Petugas/Kepala UPTD)
-```
 
-Sidebar dapat grup baru **"Data Master"** (collapsible) — hanya tampil untuk role Admin.
+### 2. Tidak ada perubahan lain
+- Tidak menyentuh `useCurrentUser`, server function `getCurrentUser`, RLS, atau halaman master.
+- Komponen `MasterIndex` dkk. sudah benar: `if (isLoading || !isAdmin) return null;` — akan otomatis berperilaku benar setelah `isLoading` melaporkan status sebenarnya.
 
-### UI pattern (konsisten 4 halaman)
-- Header halaman: judul + tombol **"Tambah Baru"** (kanan atas, primary).
-- Search bar + count.
-- Tabel: nama kolom sesuai entitas + kolom Aksi (Edit / Hapus).
-- Dialog (shadcn) untuk Create/Edit — form sederhana sesuai field.
-- AlertDialog konfirmasi sebelum Hapus.
-- Toast (sonner) untuk sukses/error.
-- Empty state + skeleton loader.
+## Verifikasi
 
-### Detail per entitas
-
-**1. Golongan** (`master_golongan`)
-- Field: `nama_golongan` (text, required, unique check di server).
-- Tabel: ID, Nama Golongan, Aksi.
-
-**2. Rangka Kegiatan** (`master_rangka`)
-- Field: `nama_rangka`.
-- Sudah ada `listRangka` + `addRangka` server fn → tambah `updateRangka`, `deleteRangka`.
-
-**3. Tempat Tujuan** (`master_tempat`)
-- Field: `nama_tempat`.
-- Sudah ada `listTempat` + `addTempat` → tambah update/delete.
-
-**4. User Pegawai** (`master_user`) — paling kompleks
-- Field: `nip` (unique), `nama`, `email_internal` (auto `${nip}@lpd.internal`), `status_kepegawaian` (ASN/Non-ASN), `role_user` (Admin/Petugas), `id_golongan` (select dari master_golongan), `jabatan`, `unit`, `is_kepala_uptd` (switch).
-- Create user: butuh `supabaseAdmin` → buat auth user + insert master_user dalam 1 transaksi server fn (admin only).
-- Edit: hanya update master_user (tidak ubah email auth kecuali NIP berubah → handle terpisah; iterasi ini **NIP tidak bisa diubah** setelah dibuat).
-- Reset password: tombol → server fn pakai admin client `auth.admin.updateUserById`.
-- Hapus: soft block jika user masih punya assignment di `detail_petugas` atau jadi kepala di `transaksi_lpd`. Kalau aman, hapus master_user + auth user.
-
-### Server functions baru (`src/lib/master.functions.ts` + `master-admin.functions.ts`)
-- `listGolongan` ✅ ada — tambah `addGolongan`, `updateGolongan`, `deleteGolongan`.
-- `updateRangka`, `deleteRangka`.
-- `updateTempat`, `deleteTempat`.
-- `listAllUsers` (lebih lengkap dari `listPetugas`), `createUser` (admin client), `updateUser`, `deleteUser`, `resetUserPassword`.
-- Semua write pakai `requireSupabaseAuth` + cek `has_role(uid, 'Admin')` di handler (RLS juga sudah enforce, tapi guard di app layer biar error message ramah).
-- `createUser` & `resetUserPassword` perlu `supabaseAdmin` (service role) — file terpisah `*.admin.functions.ts` yang **hanya** berisi createServerFn (sesuai aturan import graph).
-
-### Komponen helper
-- `DataTable` reusable kecil (header + body + empty state) — atau langsung pakai shadcn `Table` per halaman (lebih simpel, tidak over-abstract).
-- `EntityFormDialog` per halaman (form spesifik, tidak digeneralisasi).
-
-### Validasi (zod)
-- Nama: `min(2).max(120).trim()`.
-- NIP: `regex(/^[0-9]{6,30}$/)`.
-- Email internal: auto-derive, tidak diinput user.
-- Role/status: enum sesuai DB.
-
-### Guard admin
-- `_authenticated.tsx` sudah expose currentUser. Tiap route master tambah cek di component: kalau bukan Admin → redirect ke `/dashboard` + toast.
-
-## Yang TIDAK dikerjakan iterasi ini
-- Pengaturan Sistem, Cetak SPT, Upload Laporan, Soft-delete LPD → iterasi berikutnya.
-- Import bulk CSV user → nanti kalau diminta.
-
-## Konfirmasi
-- OK lanjut bangun semua 4 halaman master + user management (create/edit/delete + reset password) sekaligus?
-- Atau pecah lagi: **(A)** Golongan/Rangka/Tempat dulu (simpel), **(B)** User management terpisah (lebih berat karena pakai admin client)?
+1. Login sebagai admin (NIP `admin` / `admin123`) → klik "Data Master" → halaman 4 kartu tampil tanpa toast/redirect.
+2. Login sebagai user non-admin → buka `/master` langsung via URL → toast "Hanya untuk Admin" + redirect ke `/dashboard`.
+3. Akses `/master` saat belum login → redirect ke `/login` (oleh layout `_authenticated`), bukan ke `/dashboard`.
