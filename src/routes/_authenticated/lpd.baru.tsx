@@ -44,7 +44,7 @@ function BuatSPTPage() {
   const [tglBuat, setTglBuat] = useState(today);
   const [tglKegiatan, setTglKegiatan] = useState(today);
   const [tglSelesai, setTglSelesai] = useState(today);
-  const [jenis, setJenis] = useState("Dalam Daerah");
+  const [jenis, setJenis] = useState("Perjalanan Dinas Dalam Kota");
   const [idRangka, setIdRangka] = useState<number | "">("");
   const [idTempat, setIdTempat] = useState<number | "">("");
   const [idKepala, setIdKepala] = useState<string>("");
@@ -144,9 +144,8 @@ function BuatSPTPage() {
                 onChange={(e) => setJenis(e.target.value)}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option>Dalam Daerah</option>
-                <option>Luar Daerah</option>
-                <option>Luar Provinsi</option>
+                <option>Perjalanan Dinas Dalam Kota</option>
+                <option>Perjalanan Dinas Luar Kota</option>
               </select>
             </Fld>
             <Fld label="Tanggal Kegiatan Mulai">
