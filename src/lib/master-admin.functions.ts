@@ -57,7 +57,6 @@ export const createUser = createServerFn({ method: "POST" })
       id_user: created.user.id,
       nip: data.nip,
       nama: data.nama,
-      email_internal: email,
       status_kepegawaian: data.status_kepegawaian,
       role_user: data.role_user,
       is_kepala_uptd: data.is_kepala_uptd,
