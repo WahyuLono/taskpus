@@ -128,8 +128,12 @@ function AuthSync() {
   const router = useRouter();
   const qc = useQueryClient();
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(() => {
-      qc.invalidateQueries();
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        qc.clear();
+      } else {
+        qc.invalidateQueries();
+      }
       router.invalidate();
     });
     return () => data.subscription.unsubscribe();
