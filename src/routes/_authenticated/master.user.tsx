@@ -169,6 +169,10 @@ function Page() {
 
   const submit = async () => {
     if (!dialog) return;
+    if (dialog.mode === "add" && form.password.length < 6) {
+      toast.error("Password minimal 6 karakter");
+      return;
+    }
     setBusy(true);
     try {
       if (dialog.mode === "add") {
