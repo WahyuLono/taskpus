@@ -61,7 +61,7 @@ function LpdDetailPage() {
             label="Kepala UPTD"
             value={
               (lpd as any).kepala
-                ? `${(lpd as any).kepala.nama} • NIP ${(lpd as any).kepala.nip}`
+                ? `${(lpd as any).kepala.nama} • NIP ${formatNip((lpd as any).kepala.nip)}`
                 : "—"
             }
           />
