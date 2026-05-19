@@ -153,7 +153,8 @@ function Page() {
 
   const openEdit = (row: UserRow) => {
     setForm({
-      nip: row.nip,
+      nip: row.nip ?? "",
+      username: row.username ?? "",
       nama: row.nama,
       password: "",
       status_kepegawaian: row.status_kepegawaian,
