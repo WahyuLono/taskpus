@@ -212,7 +212,7 @@ function BuatSPTPage() {
                 <option value="">— Pilih Kepala UPTD —</option>
                 {kepala.data?.map((k: any) => (
                   <option key={k.id_user} value={k.id_user}>
-                    {k.nama} — NIP {k.nip}
+                    {k.nama} — NIP {k.nip ?? "-"}
                   </option>
                 ))}
               </select>
