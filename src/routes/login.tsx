@@ -56,16 +56,15 @@ function LoginPage() {
           className="bg-card rounded-xl p-6 shadow-card border border-outline-variant space-y-5"
         >
           <div className="space-y-2">
-            <Label htmlFor="nip">NIP</Label>
+            <Label htmlFor="identifier">NIP / Username</Label>
             <Input
-              id="nip"
+              id="identifier"
               autoFocus
               required
-              inputMode="numeric"
               autoComplete="username"
-              value={nip}
-              onChange={(e) => setNip(e.target.value)}
-              placeholder="Masukkan NIP Anda"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Masukkan NIP atau username"
             />
           </div>
           <div className="space-y-2">
