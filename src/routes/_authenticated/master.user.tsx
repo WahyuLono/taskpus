@@ -132,7 +132,8 @@ function Page() {
     return rows.filter(
       (r) =>
         r.nama.toLowerCase().includes(s) ||
-        r.nip.toLowerCase().includes(s) ||
+        (r.nip ?? "").toLowerCase().includes(s) ||
+        (r.username ?? "").toLowerCase().includes(s) ||
         (r.jabatan ?? "").toLowerCase().includes(s),
     );
   }, [rows, search]);
