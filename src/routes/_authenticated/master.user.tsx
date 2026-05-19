@@ -319,7 +319,14 @@ function Page() {
               ) : (
                 filtered.map((r) => (
                   <TableRow key={r.id_user}>
-                    <TableCell className="font-mono text-xs">{r.nip}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      <div>{r.nip ?? "-"}</div>
+                      {r.username && (
+                        <div className="text-[10px] text-on-surface-variant mt-0.5">
+                          @{r.username}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">{r.nama}</div>
                       {r.is_kepala_uptd && (
@@ -333,7 +340,7 @@ function Page() {
                       <div className="text-xs text-on-surface-variant">{r.unit ?? ""}</div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {r.id_golongan ? golMap.get(r.id_golongan) ?? "—" : "—"}
+                      {r.id_golongan ? golMap.get(r.id_golongan) ?? "-" : "-"}
                     </TableCell>
                     <TableCell>
                       <Pill kind={r.status_kepegawaian === "ASN" ? "asn" : "non"}>
