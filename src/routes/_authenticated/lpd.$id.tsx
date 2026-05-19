@@ -82,7 +82,7 @@ function LpdDetailPage() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-on-surface">{p.nama}</p>
                 <p className="text-xs text-on-surface-variant">
-                  NIP {p.nip} • {p.jabatan ?? "—"}
+                  NIP {formatNip(p.nip)} • {p.jabatan ?? "—"}
                 </p>
               </div>
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
