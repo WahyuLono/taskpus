@@ -554,7 +554,7 @@ function Page() {
           <DialogHeader>
             <DialogTitle>Reset Password</DialogTitle>
             <DialogDescription>
-              Set password baru untuk <b>{resetFor?.nama}</b> (NIP {resetFor?.nip}).
+              Set password baru untuk <b>{resetFor?.nama}</b> ({resetFor?.nip ?? resetFor?.username}).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
