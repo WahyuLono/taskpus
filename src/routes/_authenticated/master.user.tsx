@@ -294,7 +294,7 @@ function Page() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>NIP</TableHead>
+                <TableHead>NIP / Username</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Jabatan / Unit</TableHead>
                 <TableHead>Golongan</TableHead>
