@@ -25,3 +25,15 @@ export function formatDateRange(start?: string | null, end?: string | null): str
   }
   return `${formatDate(start)} – ${formatDate(end)}`;
 }
+
+export function formatNip(nip: string | null | undefined): string {
+  return nip && nip.trim() ? nip : "-";
+}
+
+export function formatGolongan(
+  id_golongan: number | null | undefined,
+  golMap?: Map<number, string>,
+): string {
+  if (!id_golongan) return "-";
+  return golMap?.get(id_golongan) ?? "-";
+}
