@@ -583,7 +583,7 @@ function Page() {
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus User?</AlertDialogTitle>
             <AlertDialogDescription>
-              Anda akan menghapus akun <b>{confirmDel?.nama}</b> (NIP {confirmDel?.nip}).
+              Anda akan menghapus akun <b>{confirmDel?.nama}</b> ({confirmDel?.nip ?? confirmDel?.username}).
               Tindakan ini akan menghapus akun login dan data profilnya secara permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
