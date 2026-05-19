@@ -181,15 +181,17 @@ function Page() {
     setBusy(true);
     try {
       if (dialog.mode === "add") {
+        const isAsn = form.status_kepegawaian === "ASN";
         await fnCreate({
           data: {
-            nip: form.nip.trim(),
+            nip: isAsn ? form.nip.trim() : null,
+            username: form.username.trim() || null,
             nama: form.nama.trim(),
             password: form.password,
             status_kepegawaian: form.status_kepegawaian,
             role_user: form.role_user,
             is_kepala_uptd: form.is_kepala_uptd,
-            id_golongan: form.id_golongan,
+            id_golongan: isAsn ? form.id_golongan : null,
             jabatan: form.jabatan.trim() || null,
             unit: form.unit.trim() || null,
           },
