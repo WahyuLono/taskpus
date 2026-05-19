@@ -392,20 +392,33 @@ function Page() {
             <DialogTitle>{isEdit ? "Edit User" : "Tambah User"}</DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "NIP & password tidak dapat diubah di sini. Gunakan tombol reset password untuk mengubah password."
-                : "Buat akun pegawai baru. Email login otomatis menjadi NIP@lpd.internal."}
+                ? "NIP/Username & password tidak dapat diubah di sini. Status kepegawaian juga dikunci. Gunakan tombol reset password untuk mengubah password."
+                : "Buat akun pegawai baru. ASN login dengan NIP, NON ASN login dengan Username."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
             <div className="space-y-2">
-              <Label>NIP</Label>
-              <Input
-                value={form.nip}
-                onChange={(e) => setForm({ ...form, nip: e.target.value.replace(/\D/g, "") })}
+              <Label>Status Kepegawaian</Label>
+              <Select
+                value={form.status_kepegawaian}
+                onValueChange={(v) => {
+                  const s = v as "ASN" | "NON ASN";
+                  setForm({
+                    ...form,
+                    status_kepegawaian: s,
+                    nip: s === "NON ASN" ? "" : form.nip,
+                    id_golongan: s === "NON ASN" ? null : form.id_golongan,
+                  });
+                }}
                 disabled={isEdit}
-                placeholder="6-30 digit angka"
-              />
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ASN">ASN</SelectItem>
+                  <SelectItem value="NON ASN">NON ASN</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Nama Lengkap</Label>
@@ -414,6 +427,42 @@ function Page() {
                 onChange={(e) => setForm({ ...form, nama: e.target.value })}
               />
             </div>
+
+            {form.status_kepegawaian === "ASN" ? (
+              <>
+                <div className="space-y-2">
+                  <Label>NIP</Label>
+                  <Input
+                    value={form.nip}
+                    onChange={(e) => setForm({ ...form, nip: e.target.value.replace(/\D/g, "") })}
+                    disabled={isEdit}
+                    placeholder="6-30 digit angka"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Username (opsional)</Label>
+                  <Input
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                    disabled={isEdit}
+                    maxLength={20}
+                    placeholder="Maks. 20 karakter, tanpa spasi/@"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Username</Label>
+                <Input
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  disabled={isEdit}
+                  maxLength={20}
+                  placeholder="Maks. 20 karakter, tanpa spasi/@"
+                />
+              </div>
+            )}
+
             {!isEdit && (
               <div className="space-y-2 md:col-span-2">
                 <Label>Password Awal</Label>
@@ -425,21 +474,7 @@ function Page() {
                 />
               </div>
             )}
-            <div className="space-y-2">
-              <Label>Status Kepegawaian</Label>
-              <Select
-                value={form.status_kepegawaian}
-                onValueChange={(v) =>
-                  setForm({ ...form, status_kepegawaian: v as "ASN" | "NON ASN" })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ASN">ASN</SelectItem>
-                  <SelectItem value="NON ASN">NON ASN</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="space-y-2">
               <Label>Role Aplikasi</Label>
               <Select
@@ -455,25 +490,27 @@ function Page() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Golongan</Label>
-              <Select
-                value={form.id_golongan ? String(form.id_golongan) : "none"}
-                onValueChange={(v) =>
-                  setForm({ ...form, id_golongan: v === "none" ? null : Number(v) })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Tidak ada —</SelectItem>
-                  {(golongan.data ?? []).map((g) => (
-                    <SelectItem key={g.id_golongan} value={String(g.id_golongan)}>
-                      {g.nama_golongan}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {form.status_kepegawaian === "ASN" && (
+              <div className="space-y-2">
+                <Label>Golongan</Label>
+                <Select
+                  value={form.id_golongan ? String(form.id_golongan) : "none"}
+                  onValueChange={(v) =>
+                    setForm({ ...form, id_golongan: v === "none" ? null : Number(v) })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Tidak ada —</SelectItem>
+                    {(golongan.data ?? []).map((g) => (
+                      <SelectItem key={g.id_golongan} value={String(g.id_golongan)}>
+                        {g.nama_golongan}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Jabatan</Label>
               <Input
