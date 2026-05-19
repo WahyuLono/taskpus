@@ -3,17 +3,70 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const CreateUserSchema = z.object({
-  nip: z.string().trim().regex(/^[0-9]{6,30}$/, "NIP harus 6-30 digit angka"),
-  nama: z.string().trim().min(2).max(120),
-  password: z.string().min(6).max(72),
-  status_kepegawaian: z.enum(["ASN", "NON ASN"]),
-  role_user: z.enum(["Admin", "Petugas"]),
-  is_kepala_uptd: z.boolean(),
-  id_golongan: z.number().int().positive().nullable(),
-  jabatan: z.string().trim().max(120).nullable(),
-  unit: z.string().trim().max(120).nullable(),
-});
+const UsernameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(20)
+  .refine((v) => !v.includes("@"), "Username tidak boleh mengandung '@'")
+  .refine((v) => !/\s/.test(v), "Username tidak boleh mengandung spasi");
+
+const NipSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9]{6,30}$/, "NIP harus 6-30 digit angka");
+
+const CreateUserSchema = z
+  .object({
+    nip: z.union([NipSchema, z.literal("")]).optional().nullable(),
+    username: z.union([UsernameSchema, z.literal("")]).optional().nullable(),
+    nama: z.string().trim().min(2).max(120),
+    password: z.string().min(6).max(72),
+    status_kepegawaian: z.enum(["ASN", "NON ASN"]),
+    role_user: z.enum(["Admin", "Petugas"]),
+    is_kepala_uptd: z.boolean(),
+    id_golongan: z.number().int().positive().nullable(),
+    jabatan: z.string().trim().max(120).nullable(),
+    unit: z.string().trim().max(120).nullable(),
+  })
+  .transform((d) => ({
+    ...d,
+    nip: d.nip ? d.nip : null,
+    username: d.username ? d.username : null,
+  }))
+  .superRefine((d, ctx) => {
+    if (d.status_kepegawaian === "ASN") {
+      if (!d.nip) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["nip"],
+          message: "NIP wajib untuk ASN",
+        });
+      }
+    } else {
+      if (d.nip) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["nip"],
+          message: "NON ASN tidak boleh memiliki NIP",
+        });
+      }
+      if (!d.username) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["username"],
+          message: "Username wajib untuk NON ASN",
+        });
+      }
+      if (d.id_golongan != null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["id_golongan"],
+          message: "NON ASN tidak memiliki golongan",
+        });
+      }
+    }
+  });
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase
@@ -33,15 +86,26 @@ export const createUser = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
 
-    const email = `${data.nip}@lpd.internal`;
+    const identifier = data.nip ?? data.username!.toLowerCase();
+    const email = `${identifier}@lpd.internal`;
 
-    // Check NIP unique in master_user
-    const { data: existing } = await supabaseAdmin
-      .from("master_user")
-      .select("id_user")
-      .eq("nip", data.nip)
-      .maybeSingle();
-    if (existing) throw new Error("NIP sudah terdaftar");
+    // Uniqueness checks
+    if (data.nip) {
+      const { data: existsNip } = await supabaseAdmin
+        .from("master_user")
+        .select("id_user")
+        .eq("nip", data.nip)
+        .maybeSingle();
+      if (existsNip) throw new Error("NIP sudah terdaftar");
+    }
+    if (data.username) {
+      const { data: existsUser } = await supabaseAdmin
+        .from("master_user")
+        .select("id_user")
+        .ilike("username", data.username)
+        .maybeSingle();
+      if (existsUser) throw new Error("Username sudah terdaftar");
+    }
 
     const { data: created, error: authErr } =
       await supabaseAdmin.auth.admin.createUser({
@@ -56,6 +120,7 @@ export const createUser = createServerFn({ method: "POST" })
     const { error: insErr } = await supabaseAdmin.from("master_user").insert({
       id_user: created.user.id,
       nip: data.nip,
+      username: data.username,
       nama: data.nama,
       status_kepegawaian: data.status_kepegawaian,
       role_user: data.role_user,
@@ -65,7 +130,6 @@ export const createUser = createServerFn({ method: "POST" })
       unit: data.unit,
     });
     if (insErr) {
-      // Rollback auth user if profile insert failed
       await supabaseAdmin.auth.admin.deleteUser(created.user.id);
       throw new Error(insErr.message);
     }
@@ -100,7 +164,6 @@ export const deleteUser = createServerFn({ method: "POST" })
       throw new Error("Tidak dapat menghapus akun Anda sendiri");
     }
 
-    // Block if user has assignments
     const { count: detailCount } = await supabaseAdmin
       .from("detail_petugas")
       .select("id_detail", { count: "exact", head: true })
