@@ -55,7 +55,8 @@ export const Route = createFileRoute("/_authenticated/master/user")({
 
 type UserRow = {
   id_user: string;
-  nip: string;
+  nip: string | null;
+  username: string | null;
   nama: string;
   email_internal: string | null;
   jabatan: string | null;
@@ -68,6 +69,7 @@ type UserRow = {
 
 type FormState = {
   nip: string;
+  username: string;
   nama: string;
   password: string;
   status_kepegawaian: "ASN" | "NON ASN";
@@ -80,6 +82,7 @@ type FormState = {
 
 const blankForm: FormState = {
   nip: "",
+  username: "",
   nama: "",
   password: "",
   status_kepegawaian: "ASN",
