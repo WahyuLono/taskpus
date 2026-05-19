@@ -17,14 +17,17 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [nip, setNip] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const email = `${nip.trim()}@lpd.internal`;
+    const raw = identifier.trim();
+    // NIP = semua digit; selain itu dianggap username (lower-case)
+    const id = /^[0-9]+$/.test(raw) ? raw : raw.toLowerCase();
+    const email = `${id}@lpd.internal`;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
@@ -53,16 +56,15 @@ function LoginPage() {
           className="bg-card rounded-xl p-6 shadow-card border border-outline-variant space-y-5"
         >
           <div className="space-y-2">
-            <Label htmlFor="nip">NIP</Label>
+            <Label htmlFor="identifier">NIP / Username</Label>
             <Input
-              id="nip"
+              id="identifier"
               autoFocus
               required
-              inputMode="numeric"
               autoComplete="username"
-              value={nip}
-              onChange={(e) => setNip(e.target.value)}
-              placeholder="Masukkan NIP Anda"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Masukkan NIP atau username"
             />
           </div>
           <div className="space-y-2">

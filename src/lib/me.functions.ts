@@ -3,7 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type CurrentUser = {
   id_user: string;
-  nip: string;
+  nip: string | null;
+  username: string | null;
   nama: string;
   role_user: "Admin" | "Petugas";
   is_kepala_uptd: boolean;
@@ -19,7 +20,7 @@ export const getCurrentUser = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("master_user")
       .select(
-        "id_user, nip, nama, role_user, is_kepala_uptd, jabatan, unit, status_kepegawaian",
+        "id_user, nip, username, nama, role_user, is_kepala_uptd, jabatan, unit, status_kepegawaian",
       )
       .eq("id_user", userId)
       .maybeSingle();
@@ -28,6 +29,7 @@ export const getCurrentUser = createServerFn({ method: "GET" })
     return {
       id_user: data.id_user,
       nip: data.nip,
+      username: data.username,
       nama: data.nama,
       role_user: (data.role_user ?? "Petugas") as "Admin" | "Petugas",
       is_kepala_uptd: !!data.is_kepala_uptd,

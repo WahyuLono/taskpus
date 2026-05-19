@@ -121,7 +121,7 @@ function BuatSPTPage() {
     idRangka && idTempat && idKepala && petugasIds.length > 0 && jenis.trim().length >= 2;
 
   const filteredPetugas = (petugas.data ?? []).filter((p: any) =>
-    `${p.nama} ${p.nip}`.toLowerCase().includes(petugasSearch.toLowerCase()),
+    `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`.toLowerCase().includes(petugasSearch.toLowerCase()),
   );
 
   return (
@@ -212,7 +212,7 @@ function BuatSPTPage() {
                 <option value="">— Pilih Kepala UPTD —</option>
                 {kepala.data?.map((k: any) => (
                   <option key={k.id_user} value={k.id_user}>
-                    {k.nama} — NIP {k.nip}
+                    {k.nama} — NIP {k.nip ?? "-"}
                   </option>
                 ))}
               </select>
@@ -253,7 +253,7 @@ function BuatSPTPage() {
                   <div className="flex-1">
                     <p className="text-sm font-medium">{p.nama}</p>
                     <p className="text-xs text-on-surface-variant">
-                      NIP {p.nip} • {p.jabatan ?? "—"}
+                      NIP {p.nip ?? "-"} • {p.jabatan ?? "—"}
                     </p>
                   </div>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">

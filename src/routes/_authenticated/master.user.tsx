@@ -55,7 +55,8 @@ export const Route = createFileRoute("/_authenticated/master/user")({
 
 type UserRow = {
   id_user: string;
-  nip: string;
+  nip: string | null;
+  username: string | null;
   nama: string;
   email_internal: string | null;
   jabatan: string | null;
@@ -68,6 +69,7 @@ type UserRow = {
 
 type FormState = {
   nip: string;
+  username: string;
   nama: string;
   password: string;
   status_kepegawaian: "ASN" | "NON ASN";
@@ -80,6 +82,7 @@ type FormState = {
 
 const blankForm: FormState = {
   nip: "",
+  username: "",
   nama: "",
   password: "",
   status_kepegawaian: "ASN",
@@ -129,7 +132,8 @@ function Page() {
     return rows.filter(
       (r) =>
         r.nama.toLowerCase().includes(s) ||
-        r.nip.toLowerCase().includes(s) ||
+        (r.nip ?? "").toLowerCase().includes(s) ||
+        (r.username ?? "").toLowerCase().includes(s) ||
         (r.jabatan ?? "").toLowerCase().includes(s),
     );
   }, [rows, search]);
@@ -149,7 +153,8 @@ function Page() {
 
   const openEdit = (row: UserRow) => {
     setForm({
-      nip: row.nip,
+      nip: row.nip ?? "",
+      username: row.username ?? "",
       nama: row.nama,
       password: "",
       status_kepegawaian: row.status_kepegawaian,
@@ -176,15 +181,17 @@ function Page() {
     setBusy(true);
     try {
       if (dialog.mode === "add") {
+        const isAsn = form.status_kepegawaian === "ASN";
         await fnCreate({
           data: {
-            nip: form.nip.trim(),
+            nip: isAsn ? form.nip.trim() : null,
+            username: form.username.trim() || null,
             nama: form.nama.trim(),
             password: form.password,
             status_kepegawaian: form.status_kepegawaian,
             role_user: form.role_user,
             is_kepala_uptd: form.is_kepala_uptd,
-            id_golongan: form.id_golongan,
+            id_golongan: isAsn ? form.id_golongan : null,
             jabatan: form.jabatan.trim() || null,
             unit: form.unit.trim() || null,
           },
@@ -287,7 +294,7 @@ function Page() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>NIP</TableHead>
+                <TableHead>NIP / Username</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Jabatan / Unit</TableHead>
                 <TableHead>Golongan</TableHead>
@@ -312,7 +319,14 @@ function Page() {
               ) : (
                 filtered.map((r) => (
                   <TableRow key={r.id_user}>
-                    <TableCell className="font-mono text-xs">{r.nip}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      <div>{r.nip ?? "-"}</div>
+                      {r.username && (
+                        <div className="text-[10px] text-on-surface-variant mt-0.5">
+                          @{r.username}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">{r.nama}</div>
                       {r.is_kepala_uptd && (
@@ -326,7 +340,7 @@ function Page() {
                       <div className="text-xs text-on-surface-variant">{r.unit ?? ""}</div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {r.id_golongan ? golMap.get(r.id_golongan) ?? "—" : "—"}
+                      {r.id_golongan ? golMap.get(r.id_golongan) ?? "-" : "-"}
                     </TableCell>
                     <TableCell>
                       <Pill kind={r.status_kepegawaian === "ASN" ? "asn" : "non"}>
@@ -378,20 +392,33 @@ function Page() {
             <DialogTitle>{isEdit ? "Edit User" : "Tambah User"}</DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "NIP & password tidak dapat diubah di sini. Gunakan tombol reset password untuk mengubah password."
-                : "Buat akun pegawai baru. Email login otomatis menjadi NIP@lpd.internal."}
+                ? "NIP/Username & password tidak dapat diubah di sini. Status kepegawaian juga dikunci. Gunakan tombol reset password untuk mengubah password."
+                : "Buat akun pegawai baru. ASN login dengan NIP, NON ASN login dengan Username."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
             <div className="space-y-2">
-              <Label>NIP</Label>
-              <Input
-                value={form.nip}
-                onChange={(e) => setForm({ ...form, nip: e.target.value.replace(/\D/g, "") })}
+              <Label>Status Kepegawaian</Label>
+              <Select
+                value={form.status_kepegawaian}
+                onValueChange={(v) => {
+                  const s = v as "ASN" | "NON ASN";
+                  setForm({
+                    ...form,
+                    status_kepegawaian: s,
+                    nip: s === "NON ASN" ? "" : form.nip,
+                    id_golongan: s === "NON ASN" ? null : form.id_golongan,
+                  });
+                }}
                 disabled={isEdit}
-                placeholder="6-30 digit angka"
-              />
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ASN">ASN</SelectItem>
+                  <SelectItem value="NON ASN">NON ASN</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Nama Lengkap</Label>
@@ -400,6 +427,42 @@ function Page() {
                 onChange={(e) => setForm({ ...form, nama: e.target.value })}
               />
             </div>
+
+            {form.status_kepegawaian === "ASN" ? (
+              <>
+                <div className="space-y-2">
+                  <Label>NIP</Label>
+                  <Input
+                    value={form.nip}
+                    onChange={(e) => setForm({ ...form, nip: e.target.value.replace(/\D/g, "") })}
+                    disabled={isEdit}
+                    placeholder="6-30 digit angka"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Username (opsional)</Label>
+                  <Input
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                    disabled={isEdit}
+                    maxLength={20}
+                    placeholder="Maks. 20 karakter, tanpa spasi/@"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Username</Label>
+                <Input
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  disabled={isEdit}
+                  maxLength={20}
+                  placeholder="Maks. 20 karakter, tanpa spasi/@"
+                />
+              </div>
+            )}
+
             {!isEdit && (
               <div className="space-y-2 md:col-span-2">
                 <Label>Password Awal</Label>
@@ -411,21 +474,7 @@ function Page() {
                 />
               </div>
             )}
-            <div className="space-y-2">
-              <Label>Status Kepegawaian</Label>
-              <Select
-                value={form.status_kepegawaian}
-                onValueChange={(v) =>
-                  setForm({ ...form, status_kepegawaian: v as "ASN" | "NON ASN" })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ASN">ASN</SelectItem>
-                  <SelectItem value="NON ASN">NON ASN</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="space-y-2">
               <Label>Role Aplikasi</Label>
               <Select
@@ -441,25 +490,27 @@ function Page() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Golongan</Label>
-              <Select
-                value={form.id_golongan ? String(form.id_golongan) : "none"}
-                onValueChange={(v) =>
-                  setForm({ ...form, id_golongan: v === "none" ? null : Number(v) })
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Tidak ada —</SelectItem>
-                  {(golongan.data ?? []).map((g) => (
-                    <SelectItem key={g.id_golongan} value={String(g.id_golongan)}>
-                      {g.nama_golongan}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {form.status_kepegawaian === "ASN" && (
+              <div className="space-y-2">
+                <Label>Golongan</Label>
+                <Select
+                  value={form.id_golongan ? String(form.id_golongan) : "none"}
+                  onValueChange={(v) =>
+                    setForm({ ...form, id_golongan: v === "none" ? null : Number(v) })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Tidak ada —</SelectItem>
+                    {(golongan.data ?? []).map((g) => (
+                      <SelectItem key={g.id_golongan} value={String(g.id_golongan)}>
+                        {g.nama_golongan}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Jabatan</Label>
               <Input
@@ -503,7 +554,7 @@ function Page() {
           <DialogHeader>
             <DialogTitle>Reset Password</DialogTitle>
             <DialogDescription>
-              Set password baru untuk <b>{resetFor?.nama}</b> (NIP {resetFor?.nip}).
+              Set password baru untuk <b>{resetFor?.nama}</b> ({resetFor?.nip ?? resetFor?.username}).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -532,7 +583,7 @@ function Page() {
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus User?</AlertDialogTitle>
             <AlertDialogDescription>
-              Anda akan menghapus akun <b>{confirmDel?.nama}</b> (NIP {confirmDel?.nip}).
+              Anda akan menghapus akun <b>{confirmDel?.nama}</b> ({confirmDel?.nip ?? confirmDel?.username}).
               Tindakan ini akan menghapus akun login dan data profilnya secara permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>

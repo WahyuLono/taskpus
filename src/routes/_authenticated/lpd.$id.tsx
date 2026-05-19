@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getLpdDetail } from "@/lib/lpd.functions";
 import { StatusBadge } from "@/components/lpd/status-badge";
-import { formatDate, formatDateRange } from "@/lib/format";
+import { formatDate, formatDateRange, formatNip } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/lpd/$id")({
   component: LpdDetailPage,
@@ -61,7 +61,7 @@ function LpdDetailPage() {
             label="Kepala UPTD"
             value={
               (lpd as any).kepala
-                ? `${(lpd as any).kepala.nama} • NIP ${(lpd as any).kepala.nip}`
+                ? `${(lpd as any).kepala.nama} • NIP ${formatNip((lpd as any).kepala.nip)}`
                 : "—"
             }
           />
@@ -82,7 +82,7 @@ function LpdDetailPage() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-on-surface">{p.nama}</p>
                 <p className="text-xs text-on-surface-variant">
-                  NIP {p.nip} • {p.jabatan ?? "—"}
+                  NIP {formatNip(p.nip)} • {p.jabatan ?? "—"}
                 </p>
               </div>
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">

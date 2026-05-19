@@ -101,11 +101,12 @@ export type Database = {
           is_kepala_uptd: boolean | null
           jabatan: string | null
           nama: string
-          nip: string
+          nip: string | null
           role_user: Database["public"]["Enums"]["role_aplikasi"] | null
           status_kepegawaian: Database["public"]["Enums"]["status_pegawai"]
           unit: string | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           created_at?: string | null
@@ -115,11 +116,12 @@ export type Database = {
           is_kepala_uptd?: boolean | null
           jabatan?: string | null
           nama: string
-          nip: string
+          nip?: string | null
           role_user?: Database["public"]["Enums"]["role_aplikasi"] | null
           status_kepegawaian: Database["public"]["Enums"]["status_pegawai"]
           unit?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           created_at?: string | null
@@ -129,11 +131,12 @@ export type Database = {
           is_kepala_uptd?: boolean | null
           jabatan?: string | null
           nama?: string
-          nip?: string
+          nip?: string | null
           role_user?: Database["public"]["Enums"]["role_aplikasi"] | null
           status_kepegawaian?: Database["public"]["Enums"]["status_pegawai"]
           unit?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: [
           {

@@ -161,7 +161,7 @@ function AuthLayout() {
               <DropdownMenuLabel>
                 <div className="flex flex-col">
                   <span className="font-semibold">{me?.nama}</span>
-                  <span className="text-xs text-on-surface-variant">NIP {me?.nip}</span>
+                  <span className="text-xs text-on-surface-variant">{me?.nip ? `NIP ${me.nip}` : `@${me?.username ?? ""}`}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

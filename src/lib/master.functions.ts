@@ -42,7 +42,7 @@ export const listPetugas = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("master_user")
-      .select("id_user, nip, nama, jabatan, status_kepegawaian, is_kepala_uptd")
+      .select("id_user, nip, username, nama, jabatan, status_kepegawaian, is_kepala_uptd")
       .order("nama");
     if (error) throw new Error(error.message);
     return data;
@@ -53,7 +53,7 @@ export const listKepala = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("master_user")
-      .select("id_user, nip, nama, jabatan")
+      .select("id_user, nip, username, nama, jabatan")
       .eq("is_kepala_uptd", true)
       .order("nama");
     if (error) throw new Error(error.message);
@@ -66,7 +66,7 @@ export const listAllUsers = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("master_user")
       .select(
-        "id_user, nip, nama, email_internal, jabatan, unit, status_kepegawaian, role_user, is_kepala_uptd, id_golongan",
+        "id_user, nip, username, nama, email_internal, jabatan, unit, status_kepegawaian, role_user, is_kepala_uptd, id_golongan",
       )
       .order("nama");
     if (error) throw new Error(error.message);
