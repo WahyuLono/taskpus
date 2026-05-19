@@ -121,7 +121,7 @@ function BuatSPTPage() {
     idRangka && idTempat && idKepala && petugasIds.length > 0 && jenis.trim().length >= 2;
 
   const filteredPetugas = (petugas.data ?? []).filter((p: any) =>
-    `${p.nama} ${p.nip}`.toLowerCase().includes(petugasSearch.toLowerCase()),
+    `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`.toLowerCase().includes(petugasSearch.toLowerCase()),
   );
 
   return (
