@@ -199,19 +199,27 @@ function Page() {
         });
         toast.success("User ditambahkan");
       } else {
+        const oldStatus = dialog.row.status_kepegawaian;
+        const newStatus = form.status_kepegawaian;
+        const isTransition = oldStatus === "NON ASN" && newStatus === "ASN";
         await fnUpdate({
           data: {
             id_user: dialog.row.id_user,
             nama: form.nama.trim(),
-            status_kepegawaian: form.status_kepegawaian,
+            status_kepegawaian: newStatus,
+            nip: isTransition ? form.nip.trim() : null,
             role_user: form.role_user,
             is_kepala_uptd: form.is_kepala_uptd,
-            id_golongan: form.id_golongan,
+            id_golongan: newStatus === "ASN" ? form.id_golongan : null,
             jabatan: form.jabatan.trim() || null,
             unit: form.unit.trim() || null,
           },
         });
-        toast.success("User diperbarui");
+        if (isTransition) {
+          toast.success("User diperbarui — login lama tidak berlaku, gunakan NIP baru");
+        } else {
+          toast.success("User diperbarui");
+        }
       }
       qc.invalidateQueries({ queryKey: ["master_user_all"] });
       close();
