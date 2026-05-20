@@ -197,3 +197,138 @@ export const deleteUser = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+// ---------- Update User (with NON ASN → ASN transition + auth email sync) ----------
+
+const UpdateUserSchema = z.object({
+  id_user: z.string().uuid(),
+  nama: z.string().trim().min(2).max(120),
+  // status optional pada payload; jika dikirim & berubah, hanya boleh NON ASN → ASN
+  status_kepegawaian: z.enum(["ASN", "NON ASN"]).optional(),
+  // nip wajib hanya saat transisi → ASN
+  nip: z.union([NipSchema, z.literal("")]).optional().nullable(),
+  role_user: z.enum(["Admin", "Petugas"]),
+  is_kepala_uptd: z.boolean(),
+  id_golongan: z.number().int().positive().nullable(),
+  jabatan: z.string().trim().max(120).nullable(),
+  unit: z.string().trim().max(120).nullable(),
+});
+
+export const updateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => UpdateUserSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+
+    // Ambil row lama
+    const { data: existing, error: loadErr } = await supabaseAdmin
+      .from("master_user")
+      .select("status_kepegawaian, nip, username, id_golongan")
+      .eq("id_user", data.id_user)
+      .maybeSingle();
+    if (loadErr) throw new Error(loadErr.message);
+    if (!existing) throw new Error("User tidak ditemukan");
+
+    const oldStatus = existing.status_kepegawaian as "ASN" | "NON ASN";
+    const newStatus = data.status_kepegawaian ?? oldStatus;
+    const inputNip = data.nip ? String(data.nip).trim() : null;
+
+    // Tolak ASN → NON ASN
+    if (oldStatus === "ASN" && newStatus === "NON ASN") {
+      throw new Error("Status ASN tidak dapat diubah menjadi NON ASN");
+    }
+
+    const isTransition = oldStatus === "NON ASN" && newStatus === "ASN";
+
+    const baseUpdate: {
+      nama: string;
+      role_user: "Admin" | "Petugas";
+      is_kepala_uptd: boolean;
+      jabatan: string | null;
+      unit: string | null;
+      updated_at: string;
+      status_kepegawaian?: "ASN" | "NON ASN";
+      nip?: string | null;
+      id_golongan?: number | null;
+    } = {
+      nama: data.nama,
+      role_user: data.role_user,
+      is_kepala_uptd: data.is_kepala_uptd,
+      jabatan: data.jabatan,
+      unit: data.unit,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isTransition) {
+      if (!inputNip) throw new Error("NIP wajib diisi saat mengubah status menjadi ASN");
+      if (data.id_golongan == null) throw new Error("Golongan wajib diisi untuk ASN");
+
+      // Cek NIP unik
+      const { data: dupe } = await supabaseAdmin
+        .from("master_user")
+        .select("id_user")
+        .eq("nip", inputNip)
+        .maybeSingle();
+      if (dupe && dupe.id_user !== data.id_user) {
+        throw new Error("NIP sudah terdaftar pada user lain");
+      }
+
+      baseUpdate.status_kepegawaian = "ASN";
+      baseUpdate.nip = inputNip;
+      baseUpdate.id_golongan = data.id_golongan;
+    } else if (newStatus === "ASN") {
+      // Sudah ASN sebelumnya — id_golongan boleh diubah, NIP tidak
+      baseUpdate.id_golongan = data.id_golongan;
+    } else {
+      // Tetap NON ASN
+      baseUpdate.id_golongan = null;
+    }
+
+    const { error: updErr } = await supabaseAdmin
+      .from("master_user")
+      .update(baseUpdate)
+      .eq("id_user", data.id_user);
+    if (updErr) throw new Error(updErr.message);
+
+    // Sinkron auth.users.email kalau ada transisi (email_internal berubah)
+    if (isTransition) {
+      const { data: refreshed, error: refErr } = await supabaseAdmin
+        .from("master_user")
+        .select("email_internal")
+        .eq("id_user", data.id_user)
+        .single();
+      if (refErr || !refreshed?.email_internal) {
+        // rollback
+        await supabaseAdmin
+          .from("master_user")
+          .update({
+            status_kepegawaian: "NON ASN",
+            nip: null,
+            id_golongan: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id_user", data.id_user);
+        throw new Error("Gagal membaca email baru, perubahan dibatalkan");
+      }
+
+      const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(
+        data.id_user,
+        { email: refreshed.email_internal, email_confirm: true },
+      );
+      if (authErr) {
+        // rollback row
+        await supabaseAdmin
+          .from("master_user")
+          .update({
+            status_kepegawaian: "NON ASN",
+            nip: null,
+            id_golongan: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id_user", data.id_user);
+        throw new Error(`Gagal sinkron email login: ${authErr.message}`);
+      }
+    }
+
+    return { ok: true, transitioned: isTransition };
+  });

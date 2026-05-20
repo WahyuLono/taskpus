@@ -165,6 +165,13 @@ function AuthLayout() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/profil" className="cursor-pointer">
+                  <span className="material-symbols-outlined !text-[18px] mr-2">person</span>
+                  Profil Saya
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-destructive">
                 <span className="material-symbols-outlined !text-[18px] mr-2">logout</span>
                 Keluar

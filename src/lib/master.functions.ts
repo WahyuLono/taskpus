@@ -196,28 +196,6 @@ export const deleteGolongan = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ---------- User update (non-admin-client fields only) ----------
+// updateUser dipindahkan ke `master-admin.functions.ts` karena memerlukan
+// admin client untuk sinkronisasi auth.users.email saat status berubah.
 
-const UpdateUserSchema = z.object({
-  id_user: z.string().uuid(),
-  nama: z.string().trim().min(2).max(120),
-  status_kepegawaian: z.enum(["ASN", "NON ASN"]),
-  role_user: z.enum(["Admin", "Petugas"]),
-  is_kepala_uptd: z.boolean(),
-  id_golongan: z.number().int().positive().nullable(),
-  jabatan: z.string().trim().max(120).nullable(),
-  unit: z.string().trim().max(120).nullable(),
-});
-
-export const updateUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d) => UpdateUserSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const { id_user, ...rest } = data;
-    const { error } = await context.supabase
-      .from("master_user")
-      .update({ ...rest, updated_at: new Date().toISOString() })
-      .eq("id_user", id_user);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });

@@ -40,11 +40,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listAllUsers, listGolongan, updateUser } from "@/lib/master.functions";
+import { listAllUsers, listGolongan } from "@/lib/master.functions";
 import {
   createUser,
   deleteUser,
   resetUserPassword,
+  updateUser,
 } from "@/lib/master-admin.functions";
 import { useRequireAdmin } from "@/hooks/use-require-admin";
 import { cn } from "@/lib/utils";
@@ -198,19 +199,27 @@ function Page() {
         });
         toast.success("User ditambahkan");
       } else {
+        const oldStatus = dialog.row.status_kepegawaian;
+        const newStatus = form.status_kepegawaian;
+        const isTransition = oldStatus === "NON ASN" && newStatus === "ASN";
         await fnUpdate({
           data: {
             id_user: dialog.row.id_user,
             nama: form.nama.trim(),
-            status_kepegawaian: form.status_kepegawaian,
+            status_kepegawaian: newStatus,
+            nip: isTransition ? form.nip.trim() : null,
             role_user: form.role_user,
             is_kepala_uptd: form.is_kepala_uptd,
-            id_golongan: form.id_golongan,
+            id_golongan: newStatus === "ASN" ? form.id_golongan : null,
             jabatan: form.jabatan.trim() || null,
             unit: form.unit.trim() || null,
           },
         });
-        toast.success("User diperbarui");
+        if (isTransition) {
+          toast.success("User diperbarui — login lama tidak berlaku, gunakan NIP baru");
+        } else {
+          toast.success("User diperbarui");
+        }
       }
       qc.invalidateQueries({ queryKey: ["master_user_all"] });
       close();
@@ -392,76 +401,97 @@ function Page() {
             <DialogTitle>{isEdit ? "Edit User" : "Tambah User"}</DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "NIP/Username & password tidak dapat diubah di sini. Status kepegawaian juga dikunci. Gunakan tombol reset password untuk mengubah password."
+                ? "Username & password tidak dapat diubah di sini. Status NON ASN dapat dipromosikan menjadi ASN (sekali jalan)."
                 : "Buat akun pegawai baru. ASN login dengan NIP, NON ASN login dengan Username."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-            <div className="space-y-2">
-              <Label>Status Kepegawaian</Label>
-              <Select
-                value={form.status_kepegawaian}
-                onValueChange={(v) => {
-                  const s = v as "ASN" | "NON ASN";
-                  setForm({
-                    ...form,
-                    status_kepegawaian: s,
-                    nip: s === "NON ASN" ? "" : form.nip,
-                    id_golongan: s === "NON ASN" ? null : form.id_golongan,
-                  });
-                }}
-                disabled={isEdit}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ASN">ASN</SelectItem>
-                  <SelectItem value="NON ASN">NON ASN</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Nama Lengkap</Label>
-              <Input
-                value={form.nama}
-                onChange={(e) => setForm({ ...form, nama: e.target.value })}
-              />
-            </div>
-
-            {form.status_kepegawaian === "ASN" ? (
+          {(() => {
+            const editingRow = dialog?.mode === "edit" ? dialog.row : null;
+            const wasNonAsn = editingRow?.status_kepegawaian === "NON ASN";
+            const wasAsn = editingRow?.status_kepegawaian === "ASN";
+            const statusLocked = isEdit && wasAsn; // ASN tidak bisa diubah, NON ASN bisa
+            const isPromoting = isEdit && wasNonAsn && form.status_kepegawaian === "ASN";
+            return (
               <>
-                <div className="space-y-2">
-                  <Label>NIP</Label>
-                  <Input
-                    value={form.nip}
-                    onChange={(e) => setForm({ ...form, nip: e.target.value.replace(/\D/g, "") })}
-                    disabled={isEdit}
-                    placeholder="6-30 digit angka"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Username (opsional)</Label>
-                  <Input
-                    value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    disabled={isEdit}
-                    maxLength={20}
-                    placeholder="Maks. 20 karakter, tanpa spasi/@"
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="space-y-2 md:col-span-2">
-                <Label>Username</Label>
-                <Input
-                  value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
-                  disabled={isEdit}
-                  maxLength={20}
-                  placeholder="Maks. 20 karakter, tanpa spasi/@"
-                />
-              </div>
-            )}
+                {isPromoting && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                    <b>Perhatian:</b> Setelah disimpan, user ini akan logout otomatis
+                    dan harus login ulang menggunakan NIP baru.
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                  <div className="space-y-2">
+                    <Label>Status Kepegawaian</Label>
+                    <Select
+                      value={form.status_kepegawaian}
+                      onValueChange={(v) => {
+                        const s = v as "ASN" | "NON ASN";
+                        setForm({
+                          ...form,
+                          status_kepegawaian: s,
+                          nip: s === "NON ASN" ? "" : form.nip,
+                          id_golongan: s === "NON ASN" ? null : form.id_golongan,
+                        });
+                      }}
+                      disabled={statusLocked}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ASN">ASN</SelectItem>
+                        <SelectItem
+                          value="NON ASN"
+                          disabled={isEdit && wasNonAsn ? false : isEdit}
+                        >
+                          NON ASN
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nama Lengkap</Label>
+                    <Input
+                      value={form.nama}
+                      onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                    />
+                  </div>
+
+                  {form.status_kepegawaian === "ASN" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label>NIP {isPromoting && <span className="text-destructive">*</span>}</Label>
+                        <Input
+                          value={form.nip}
+                          onChange={(e) => setForm({ ...form, nip: e.target.value.replace(/\D/g, "") })}
+                          disabled={isEdit && !isPromoting}
+                          placeholder="6-30 digit angka"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Username {isEdit ? "" : "(opsional)"}</Label>
+                        <Input
+                          value={form.username}
+                          onChange={(e) => setForm({ ...form, username: e.target.value })}
+                          disabled={isEdit}
+                          maxLength={20}
+                          placeholder="Maks. 20 karakter, tanpa spasi/@"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Username</Label>
+                      <Input
+                        value={form.username}
+                        onChange={(e) => setForm({ ...form, username: e.target.value })}
+                        disabled={isEdit}
+                        maxLength={20}
+                        placeholder="Maks. 20 karakter, tanpa spasi/@"
+                      />
+                    </div>
+                  )}
+
 
             {!isEdit && (
               <div className="space-y-2 md:col-span-2">
@@ -538,6 +568,11 @@ function Page() {
               />
             </div>
           </div>
+              </>
+            );
+          })()}
+
+
 
           <DialogFooter>
             <Button variant="outline" onClick={close} disabled={busy}>Batal</Button>

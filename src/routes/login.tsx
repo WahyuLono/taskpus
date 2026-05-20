@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveLoginEmail } from "@/lib/auth.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const resolve = useServerFn(resolveLoginEmail);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,17 +28,28 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     const raw = identifier.trim();
-    // NIP = semua digit; selain itu dianggap username (lower-case)
-    const id = /^[0-9]+$/.test(raw) ? raw : raw.toLowerCase();
-    const email = `${id}@lpd.internal`;
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      toast.error("Login gagal", { description: error.message });
-      return;
+    try {
+      let email: string | null = null;
+      try {
+        const r = await resolve({ data: { identifier: raw } });
+        email = r.email;
+      } catch {
+        // ignore — fall through to naive guess to avoid leaking enumeration
+      }
+      if (!email) {
+        const id = /^[0-9]+$/.test(raw) ? raw : raw.toLowerCase();
+        email = `${id}@lpd.internal`;
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error("Login gagal", { description: error.message });
+        return;
+      }
+      toast.success("Login berhasil");
+      navigate({ to: "/dashboard" });
+    } finally {
+      setLoading(false);
     }
-    toast.success("Login berhasil");
-    navigate({ to: "/dashboard" });
   };
 
   return (
