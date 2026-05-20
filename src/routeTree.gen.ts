@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTugasRouteImport } from './routes/_authenticated/tugas'
+import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMasterIndexRouteImport } from './routes/_authenticated/master.index'
 import { Route as AuthenticatedLpdIndexRouteImport } from './routes/_authenticated/lpd.index'
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedTugasRoute = AuthenticatedTugasRouteImport.update({
   id: '/tugas',
   path: '/tugas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/profil': typeof AuthenticatedProfilRoute
   '/tugas': typeof AuthenticatedTugasRoute
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/profil': typeof AuthenticatedProfilRoute
   '/tugas': typeof AuthenticatedTugasRoute
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/profil': typeof AuthenticatedProfilRoute
   '/_authenticated/tugas': typeof AuthenticatedTugasRoute
   '/_authenticated/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/_authenticated/lpd/baru': typeof AuthenticatedLpdBaruRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/dashboard'
+    | '/profil'
     | '/tugas'
     | '/lpd/$id'
     | '/lpd/baru'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/dashboard'
+    | '/profil'
     | '/tugas'
     | '/lpd/$id'
     | '/lpd/baru'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/_authenticated/profil'
     | '/_authenticated/tugas'
     | '/_authenticated/lpd/$id'
     | '/_authenticated/lpd/baru'
@@ -216,6 +228,13 @@ declare module '@tanstack/react-router' {
       path: '/tugas'
       fullPath: '/tugas'
       preLoaderRoute: typeof AuthenticatedTugasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profil': {
+      id: '/_authenticated/profil'
+      path: '/profil'
+      fullPath: '/profil'
+      preLoaderRoute: typeof AuthenticatedProfilRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
@@ -286,6 +305,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
   AuthenticatedTugasRoute: typeof AuthenticatedTugasRoute
   AuthenticatedLpdIdRoute: typeof AuthenticatedLpdIdRoute
   AuthenticatedLpdBaruRoute: typeof AuthenticatedLpdBaruRoute
@@ -299,6 +319,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProfilRoute: AuthenticatedProfilRoute,
   AuthenticatedTugasRoute: AuthenticatedTugasRoute,
   AuthenticatedLpdIdRoute: AuthenticatedLpdIdRoute,
   AuthenticatedLpdBaruRoute: AuthenticatedLpdBaruRoute,
@@ -322,3 +343,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
