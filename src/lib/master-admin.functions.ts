@@ -240,7 +240,17 @@ export const updateUser = createServerFn({ method: "POST" })
 
     const isTransition = oldStatus === "NON ASN" && newStatus === "ASN";
 
-    const baseUpdate: Record<string, unknown> = {
+    const baseUpdate: {
+      nama: string;
+      role_user: "Admin" | "Petugas";
+      is_kepala_uptd: boolean;
+      jabatan: string | null;
+      unit: string | null;
+      updated_at: string;
+      status_kepegawaian?: "ASN" | "NON ASN";
+      nip?: string | null;
+      id_golongan?: number | null;
+    } = {
       nama: data.nama,
       role_user: data.role_user,
       is_kepala_uptd: data.is_kepala_uptd,

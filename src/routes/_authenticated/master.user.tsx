@@ -40,11 +40,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { listAllUsers, listGolongan, updateUser } from "@/lib/master.functions";
+import { listAllUsers, listGolongan } from "@/lib/master.functions";
 import {
   createUser,
   deleteUser,
   resetUserPassword,
+  updateUser,
 } from "@/lib/master-admin.functions";
 import { useRequireAdmin } from "@/hooks/use-require-admin";
 import { cn } from "@/lib/utils";
