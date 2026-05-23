@@ -70,19 +70,64 @@ export const getLpdDetail = createServerFn({ method: "GET" })
         `*,
          master_rangka:id_rangka(nama_rangka),
          master_tempat:id_tempat(nama_tempat),
-         kepala:id_kepala(id_user, nama, nip, jabatan)`,
+         kepala:id_kepala(id_user, nama, nip, jabatan, unit, status_kepegawaian, master_golongan:id_golongan(nama_golongan))`,
       )
       .eq("id_lpd", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!lpd) throw new Error("LPD tidak ditemukan");
 
-    const { data: petugas } = await supabase
+    const { data: petugas, error: petugasErr } = await supabase
       .from("detail_petugas")
-      .select("master_user:id_user_petugas(id_user, nip, nama, jabatan, status_kepegawaian)")
-      .eq("id_lpd", data.id);
+      .select(
+        `id_detail,
+         master_user:id_user_petugas(
+           id_user, nip, nama, jabatan, unit, status_kepegawaian,
+           master_golongan:id_golongan(nama_golongan)
+         )`,
+      )
+      .eq("id_lpd", data.id)
+      .order("id_detail", { ascending: true });
+    if (petugasErr) throw new Error(petugasErr.message);
 
-    return { lpd, petugas: (petugas ?? []).map((r) => r.master_user).filter(Boolean) };
+    return {
+      lpd,
+      petugas: (petugas ?? []).map((r: any) => r.master_user).filter(Boolean),
+    };
+  });
+
+const SubmitLaporanSchema = z.object({
+  id: z.string().uuid(),
+  hasil_kegiatan: z.string().min(150).max(10000),
+  url_foto: z.string().min(1).max(500),
+});
+
+export const submitLaporan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => SubmitLaporanSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: lpd, error: fetchErr } = await supabase
+      .from("transaksi_lpd")
+      .select("id_lpd, status_lpd")
+      .eq("id_lpd", data.id)
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!lpd) throw new Error("LPD tidak ditemukan");
+    if (lpd.status_lpd !== "Belum")
+      throw new Error("Laporan sudah dikirim atau LPD dibatalkan");
+
+    const { error: updErr } = await supabase
+      .from("transaksi_lpd")
+      .update({
+        status_lpd: "Sudah",
+        hasil_kegiatan: data.hasil_kegiatan,
+        url_foto: data.url_foto,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id_lpd", data.id);
+    if (updErr) throw new Error(updErr.message);
+    return { ok: true };
   });
 
 export const listMyTasks = createServerFn({ method: "GET" })
