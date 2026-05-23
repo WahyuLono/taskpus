@@ -1,102 +1,118 @@
-## Rencana Implementasi
+## Tujuan
+Membangun alur dari Daftar LPD → Halaman Detail LPD dinamis yang lengkap (action bar, info perjalanan, daftar petugas adaptif, laporan hasil pelaksanaan), serta route cetak SPT terpisah.
 
-### A. Login PNS/Petugas pakai NIP **atau** Username
+## Catatan Skema
+- Tabel `detail_petugas` **tidak punya kolom `urutan`** — yang ada: `id_detail` (serial), `id_user_petugas`, `id_lpd`. Akan diurutkan `ORDER BY id_detail ASC` (sesuai urutan input saat pembuatan SPT — efeknya sama dengan "urutan").
+- `transaksi_lpd.url_foto` dan `hasil_kegiatan` sudah ada.
+- Perlu storage bucket baru `lpd-foto` (private, dengan policy: admin & petugas-ditugaskan boleh upload/baca foto LPD-nya).
 
-**Masalah:** PNS yang punya username → `email_internal` tetap pakai NIP (karena `COALESCE(nip, username)`). Login pakai username kirim email yang salah → gagal.
+## 1. Navigasi List → Detail
+Sudah berfungsi di `src/routes/_authenticated/lpd.index.tsx` (kolom aksi pakai `<Link to="/lpd/$id" params={{ id: row.id_lpd }}>Detail</Link>`). **Tidak diubah.**
 
-**Solusi:** Lookup `email_internal` dulu sebelum `signInWithPassword`.
-
-- Tambah server function publik `resolveLoginEmail(identifier)` di `src/lib/auth.functions.ts` (pakai `supabaseAdmin`, tanpa middleware):
-  ```sql
-  SELECT email_internal FROM master_user
-  WHERE nip = :identifier OR lower(username) = lower(:identifier)
-  LIMIT 1
+## 2. Perluasan Server Function `getLpdDetail`
+File: `src/lib/lpd.functions.ts`
+- Tambahkan join `master_golongan(nama_golongan)` dan field `pangkat_golongan`, `unit` ke petugas + kepala.
+- Ubah query `detail_petugas`:
   ```
-- Rate-limit sederhana: validasi panjang input ≤20 char, regex aman.
-- `src/routes/login.tsx`: panggil `resolveLoginEmail` → kalau hit, pakai email-nya; kalau null, tetap coba `${identifier}@lpd.internal` (fallback supaya error UX tetap "kredensial salah", bukan "user tidak ada").
+  select id_detail, master_user:id_user_petugas(
+    id_user, nip, nama, jabatan, unit, status_kepegawaian,
+    master_golongan:id_golongan(nama_golongan)
+  )
+  order by id_detail asc
+  ```
+- Cek otorisasi petugas (sudah lewat RLS — petugas yang ditugaskan saja yang bisa lihat).
 
-### B. Unlock Edit Status Kepegawaian (NON ASN → ASN, satu arah)
+## 3. Server Function Baru: `submitLaporan`
+File: `src/lib/lpd.functions.ts`
+- Input: `id` (uuid), `hasil_kegiatan` (string min 150), `url_foto` (string).
+- Validasi: user adalah Admin atau petugas yang ditugaskan untuk LPD ini.
+- Update `transaksi_lpd` → `status_lpd='Sudah'`, simpan `hasil_kegiatan` & `url_foto`, set `updated_at`.
 
-**Aturan final:**
-- `status_kepegawaian` boleh diedit **hanya** dari NON ASN → ASN. Sebaliknya ditolak di handler.
-- Saat transisi: admin **wajib** input NIP + Golongan.
-- `username` tetap terkunci di form edit (read-only).
-- `email_internal` akan berubah otomatis dari `username@lpd.internal` → `nip@lpd.internal` → **harus** sync ke `auth.users.email`.
+## 4. Storage Bucket + Upload
+Migrasi SQL:
+- Bucket `lpd-foto` (private).
+- Policy SELECT/INSERT: `has_role(auth.uid(),'Admin') OR is_assigned_to_lpd(auth.uid(), <id_lpd parsed from object path>)`.
+- Path convention: `lpd/{id_lpd}/foto-{timestamp}.{ext}`.
 
-**Implementasi:**
+Upload dilakukan **client-side** via `supabase.storage.from('lpd-foto').upload(path, file)`, lalu URL/path dikirim ke `submitLaporan`.
 
-1. Tambah handler `updateUser` di `src/lib/master-admin.functions.ts`:
-   ```
-   .middleware([requireSupabaseAuth])  // + cek role Admin
-   .inputValidator(zod schema: id_user, nama, jabatan, unit, role_user, is_kepala_uptd, status_kepegawaian?, nip?, id_golongan?)
-   .handler:
-     - Load row lama
-     - Tolak jika status lama = ASN dan input mau ubah jadi NON ASN
-     - Tolak jika input ubah username (defense in depth)
-     - Jika transisi NON ASN → ASN:
-         - Validasi nip (digit, unique) & id_golongan ada
-         - UPDATE master_user SET status='ASN', nip=..., id_golongan=...
-         - SELECT email_internal baru
-         - supabaseAdmin.auth.admin.updateUserById(id, { email: newEmail, email_confirm: true })
-         - Jika auth update gagal: rollback row (UPDATE balik) lalu throw
-     - Else: UPDATE field non-sensitif saja
-   ```
+## 5. Redesign Halaman Detail
+File: `src/routes/_authenticated/lpd.$id.tsx` (rewrite penuh)
 
-2. `src/routes/_authenticated/master.user.tsx`:
-   - Dialog Edit User: unlock dropdown `status_kepegawaian` **hanya jika** value awal = NON ASN. Untuk row ASN, tetap disabled.
-   - Saat user pilih ASN → tampilkan field NIP & Golongan (wajib).
-   - Tampilkan **alert** di dialog: *"Setelah disimpan, user ini harus login ulang menggunakan NIP baru."*
-   - Username field selalu read-only di edit.
+Struktur:
+```
+[Back link "← Daftar LPD"]
 
-### C. Petugas Edit Profil Sendiri (Username + Password)
+[Action Bar — sticky kanan-atas]
+  • Judul: "Surat Perintah Tugas {no_surat}"  + StatusBadge
+  • Button utama: "Cetak Surat Tugas (SPT)" (icon printer)
+    → <a href="/print/lpd/{id}" target="_blank" rel="noopener">
 
-**Rute baru:** `src/routes/_authenticated/profil.tsx` (akses semua role, tidak hanya Petugas — biar Admin juga bisa).
+[Card 1 — Informasi Perjalanan]
+  Grid 2 kolom: Jenis Perjalanan, Maksud (Rangka), Tempat Tujuan,
+  Tanggal Kegiatan, Lama, Kepala UPTD (nama+NIP).
 
-**Tiga bagian terpisah:**
+[Card 2 — Daftar Petugas Yang Ditugaskan]
+  if petugas.length === 1:
+    Card tunggal besar: Nama, NIP, Pangkat/Golongan, Jabatan, Unit
+    (label kiri 140px + ":" + value, monospace untuk NIP).
+  else:
+    Loop bernomor (1, 2, 3 …) stacked rows.
+    Tiap baris pakai grid `[label 160px] [: 12px] [value]`
+    sehingga tanda ":" align sempurna untuk seluruh petugas.
 
-1. **Ubah Password** — `supabase.auth.updateUser({ password })` langsung di client (validasi min 6 char + konfirmasi). Tidak ada efek samping.
+[Card 3 — Laporan Hasil Pelaksanaan Tugas]
+  if status_lpd === 'Belum':
+    Form (visible utk Admin atau petugas ditugaskan):
+      • Textarea "Hasil Kegiatan" — counter karakter, min 150,
+        tombol submit disabled sampai >=150.
+      • Dropzone foto (drag-and-drop + click), 1 foto, preview thumbnail,
+        validasi tipe (image/*) & ukuran (max 5MB).
+      • Tombol "Simpan & Tandai Selesai".
+    Flow submit:
+      1) Upload foto ke storage → dapat path
+      2) Panggil submitLaporan dengan hasil_kegiatan + url_foto
+      3) Invalidate query → UI auto switch ke mode read-only.
+  if status_lpd === 'Sudah':
+    Read-only:
+      • Heading "Hasil Kegiatan" + paragraf whitespace-pre-line.
+      • Heading "Dokumentasi" + preview foto (signed URL, aspect ratio 16:9,
+        klik = buka full di tab baru).
+  if status_lpd === 'Batal':
+    Empty state ringkas "LPD dibatalkan".
 
-2. **Ubah Username** — server function `updateOwnUsername(username)` di `src/lib/me.functions.ts`:
-   - `requireSupabaseAuth`, validasi 1–20 char, no `@`/whitespace, unique case-insensitive.
-   - Load row user.
-   - UPDATE `master_user.username`.
-   - **Jika user status NON ASN** → `email_internal` berubah → sync `auth.users.email` via `supabaseAdmin.auth.admin.updateUserById`. Tampilkan peringatan di UI: *"Email login berubah, Anda akan logout otomatis."* Setelah sukses, panggil `supabase.auth.signOut()` dan redirect ke `/login`.
-   - **Jika user status ASN** → `email_internal` tidak berubah (COALESCE pilih NIP) → cukup update kolom username, tidak perlu sign out.
+[Loading & Error]
+  • Skeleton/spinner untuk fetch awal.
+  • Toast + retry untuk error mutation.
+  • errorComponent route untuk fetch gagal (sudah ada di root).
+```
 
-3. **Info read-only:** NIP, status, golongan, jabatan, unit — supaya user lihat profilnya.
+## 6. Route Cetak Baru `/print/lpd/:id`
+File baru: `src/routes/_authenticated/print.lpd.$id.tsx`
+- Tetap di bawah `_authenticated` (perlu sesi).
+- Layout minimal A4 (CSS `@page { size: A4; margin: 2cm }`, font Times-like).
+- Render kop surat (akan dibuat statis dengan teks "PEMERINTAH KAB. KOTAWARINGIN BARAT / DINAS KESEHATAN / PUSKESMAS KUMAI" — placeholder logo, mengikuti contoh `kop_surat.png`).
+- Render isi sesuai template `isi_surat.png`: dasar hukum, MEMERINTAHKAN, daftar petugas (loop), bagian "Untuk", footer tanda tangan Kepala UPTD.
+- `useEffect` → `window.print()` setelah data ter-load.
+- Tombol "Tutup" untuk close tab (hidden di `@media print`).
 
-**Sidebar:** Tambah link "Profil Saya" → `/profil`.
+> Hanya kerangka isi. Penyempurnaan kop/logo bisa dilakukan terpisah bila user mau.
 
-### D. File yang Disentuh
+## 7. Verifikasi
+1. Klik "Detail" pada list → masuk ke `/lpd/{uuid}` dan data tampil.
+2. Tombol "Cetak Surat Tugas" → buka tab baru `/print/lpd/{uuid}`, auto `print()`.
+3. LPD dengan 1 petugas → render card tunggal.
+4. LPD dengan ≥2 petugas → render daftar bernomor dengan ":" sejajar.
+5. Status `Belum` → form muncul; textarea <150 char disable tombol; upload foto → submit → status switch ke `Sudah` tanpa reload.
+6. Status `Sudah` → form jadi read-only dengan foto preview.
+7. Gagal fetch → tampil errorComponent; gagal upload/submit → toast error.
 
-- `src/lib/auth.functions.ts` (BARU) — `resolveLoginEmail`
-- `src/lib/master-admin.functions.ts` — tambah `updateUser`
-- `src/lib/me.functions.ts` — tambah `updateOwnUsername`
-- `src/routes/login.tsx` — lookup sebelum signIn
-- `src/routes/_authenticated/master.user.tsx` — dialog Edit User dengan unlock status bersyarat
-- `src/routes/_authenticated/profil.tsx` (BARU) — form password + username + info
-- `src/routes/_authenticated.tsx` (sidebar) — link Profil
+## File Terdampak
+- ✏️ `src/lib/lpd.functions.ts` — perluas `getLpdDetail`, tambah `submitLaporan`.
+- ✏️ `src/routes/_authenticated/lpd.$id.tsx` — rewrite penuh.
+- 🆕 `src/routes/_authenticated/print.lpd.$id.tsx` — halaman cetak.
+- 🗄️ Migrasi: bucket `lpd-foto` + policy storage.
 
-### E. Risiko & Mitigasi
-
-| Risiko | Mitigasi |
-|---|---|
-| Auth email berubah tapi DB sudah commit (atau sebaliknya) | Urutan: update DB → update auth → kalau auth gagal, rollback DB dalam try/catch. Tidak pakai transaksi DB lintas service, tapi window race sangat kecil. |
-| User aktif kena logout mendadak | Peringatan eksplisit di UI sebelum simpan + auto signOut + redirect login |
-| Username conflict case-insensitive | Unique index `lower(username)` sudah ada; tangani error `23505` jadi pesan "username sudah dipakai" |
-| Identifier login ambigu (NIP sama dengan username orang lain) | Tidak mungkin: NIP unik, username unik, dan dipisahkan domain numeric — tapi `OR` di lookup tetap aman karena dua kolom unik |
-| Petugas spam ganti username | Server function di-rate-limit Supabase default; tidak ada throttling khusus (bisa ditambah nanti kalau perlu) |
-
-### F. Tidak Diperlukan Migrasi DB
-
-Semua skema sudah cukup. Generated column `email_internal` sudah handle COALESCE dengan benar; tinggal kode aplikasi yang sinkron ke auth.users.
-
-### G. Verifikasi Akhir
-
-1. Buat user NON ASN baru → login pakai username → ✅
-2. Buat user ASN dengan username opsional → login pakai NIP → ✅, login pakai username → ✅ (via resolveLoginEmail)
-3. Admin edit user NON ASN → ASN, isi NIP+Golongan → simpan → user lama logout, login ulang pakai NIP → ✅
-4. Admin coba edit ASN → NON ASN → ditolak ✅
-5. Petugas ASN ganti username sendiri → tetap login, tidak logout ✅
-6. Petugas NON ASN ganti username sendiri → auto logout, login ulang pakai username baru ✅
-7. Semua role ganti password sendiri → tetap login (Supabase keep session) ✅
+## Pertanyaan Terbuka
+- Apakah perlu menyimpan logo Pemkab & Puskesmas di `src/assets/` untuk halaman cetak? (Saat ini saya rencanakan placeholder teks; mohon upload bila ingin logo aktual.)
+- Untuk "Pangkat/Golongan" pada NON ASN — bila tidak punya `id_golongan`, tampilkan "—". OK?
