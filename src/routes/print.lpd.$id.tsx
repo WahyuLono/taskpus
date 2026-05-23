@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getLpdDetail } from "@/lib/lpd.functions";
 import { formatDate, formatNip } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/print/lpd/$id")({
+export const Route = createFileRoute("/print/lpd/$id")({
   component: PrintSptPage,
 });
 
