@@ -17,6 +17,7 @@ import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMasterIndexRouteImport } from './routes/_authenticated/master.index'
 import { Route as AuthenticatedLpdIndexRouteImport } from './routes/_authenticated/lpd.index'
+import { Route as PrintLpdIdRouteImport } from './routes/print.lpd.$id'
 import { Route as AuthenticatedMasterUserRouteImport } from './routes/_authenticated/master.user'
 import { Route as AuthenticatedMasterTempatRouteImport } from './routes/_authenticated/master.tempat'
 import { Route as AuthenticatedMasterRangkaRouteImport } from './routes/_authenticated/master.rangka'
@@ -64,6 +65,11 @@ const AuthenticatedLpdIndexRoute = AuthenticatedLpdIndexRouteImport.update({
   path: '/lpd/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const PrintLpdIdRoute = PrintLpdIdRouteImport.update({
+  id: '/print/lpd/$id',
+  path: '/print/lpd/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedMasterUserRoute = AuthenticatedMasterUserRouteImport.update({
   id: '/master/user',
   path: '/master/user',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
+  '/print/lpd/$id': typeof PrintLpdIdRoute
   '/lpd/': typeof AuthenticatedLpdIndexRoute
   '/master/': typeof AuthenticatedMasterIndexRoute
 }
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
+  '/print/lpd/$id': typeof PrintLpdIdRoute
   '/lpd': typeof AuthenticatedLpdIndexRoute
   '/master': typeof AuthenticatedMasterIndexRoute
 }
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/_authenticated/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/_authenticated/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/_authenticated/master/user': typeof AuthenticatedMasterUserRoute
+  '/print/lpd/$id': typeof PrintLpdIdRoute
   '/_authenticated/lpd/': typeof AuthenticatedLpdIndexRoute
   '/_authenticated/master/': typeof AuthenticatedMasterIndexRoute
 }
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/master/rangka'
     | '/master/tempat'
     | '/master/user'
+    | '/print/lpd/$id'
     | '/lpd/'
     | '/master/'
   fileRoutesByTo: FileRoutesByTo
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/master/rangka'
     | '/master/tempat'
     | '/master/user'
+    | '/print/lpd/$id'
     | '/lpd'
     | '/master'
   id:
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/_authenticated/master/rangka'
     | '/_authenticated/master/tempat'
     | '/_authenticated/master/user'
+    | '/print/lpd/$id'
     | '/_authenticated/lpd/'
     | '/_authenticated/master/'
   fileRoutesById: FileRoutesById
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  PrintLpdIdRoute: typeof PrintLpdIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/lpd/'
       preLoaderRoute: typeof AuthenticatedLpdIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/print/lpd/$id': {
+      id: '/print/lpd/$id'
+      path: '/print/lpd/$id'
+      fullPath: '/print/lpd/$id'
+      preLoaderRoute: typeof PrintLpdIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/master/user': {
       id: '/_authenticated/master/user'
@@ -339,7 +359,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  PrintLpdIdRoute: PrintLpdIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

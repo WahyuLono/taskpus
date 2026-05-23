@@ -1,13 +1,23 @@
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getLpdDetail } from "@/lib/lpd.functions";
+import { toast } from "sonner";
+import { getLpdDetail, submitLaporan } from "@/lib/lpd.functions";
 import { StatusBadge } from "@/components/lpd/status-badge";
 import { formatDate, formatDateRange, formatNip } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/lpd/$id")({
   component: LpdDetailPage,
 });
+
+const MIN_HASIL = 150;
+const MAX_FOTO_MB = 5;
 
 function LpdDetailPage() {
   const { id } = Route.useParams();
@@ -17,88 +27,110 @@ function LpdDetailPage() {
     queryFn: () => fetchDetail({ data: { id } }),
   });
 
-  if (q.isLoading) return <p className="text-on-surface-variant">Memuat…</p>;
-  if (q.isError) return <p className="text-destructive">{(q.error as Error).message}</p>;
+  if (q.isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-on-surface-variant py-12 justify-center">
+        <span className="material-symbols-outlined animate-spin">progress_activity</span>
+        Memuat detail LPD…
+      </div>
+    );
+  }
+  if (q.isError) {
+    return (
+      <div className="bg-card border border-destructive/30 rounded-xl p-6 text-center">
+        <p className="font-semibold text-destructive">Gagal memuat data</p>
+        <p className="text-sm text-on-surface-variant mt-1">
+          {(q.error as Error).message}
+        </p>
+        <Button onClick={() => q.refetch()} className="mt-4">
+          Coba lagi
+        </Button>
+      </div>
+    );
+  }
   if (!q.data) return null;
 
-  const { lpd, petugas } = q.data;
+  const { lpd, petugas } = q.data as { lpd: any; petugas: any[] };
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-3">
         <Link to="/lpd" className="text-sm text-on-surface-variant hover:text-primary">
           ← Daftar LPD
         </Link>
       </div>
 
-      <div className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-on-surface-variant">
-              Nomor Surat
-            </p>
-            <h2 className="text-2xl font-bold text-on-surface mt-1">{(lpd as any).no_surat}</h2>
-            <p className="text-sm text-on-surface-variant mt-1">
-              Dibuat {formatDate((lpd as any).tgl_buat, true)}
-            </p>
+      {/* Action Bar */}
+      <div className="bg-card rounded-xl border border-outline-variant shadow-card p-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-on-surface-variant">
+            Surat Perintah Tugas
+          </p>
+          <h1 className="text-2xl font-bold text-on-surface mt-1">{lpd.no_surat}</h1>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <StatusBadge status={lpd.status_lpd} />
+            <span className="text-xs text-on-surface-variant">
+              Dibuat {formatDate(lpd.tgl_buat, true)}
+            </span>
           </div>
-          <StatusBadge status={(lpd as any).status_lpd} />
         </div>
+        <a
+          href={`/print/lpd/${id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
+        >
+          <span className="material-symbols-outlined !text-[20px]">print</span>
+          Cetak Surat Tugas (SPT)
+        </a>
+      </div>
 
-        <div className="grid sm:grid-cols-2 gap-5 mt-6">
-          <Field label="Jenis Perjalanan Dinas" value={(lpd as any).jenis_perjadin} />
-          <Field
-            label="Dalam Rangka"
-            value={(lpd as any).master_rangka?.nama_rangka ?? "—"}
-          />
-          <Field label="Tempat" value={(lpd as any).master_tempat?.nama_tempat ?? "—"} />
+      {/* Info Perjalanan */}
+      <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
+        <h2 className="font-semibold text-on-surface mb-4">Informasi Perjalanan</h2>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <Field label="Jenis Perjalanan Dinas" value={lpd.jenis_perjadin} />
+          <Field label="Dalam Rangka" value={lpd.master_rangka?.nama_rangka ?? "—"} />
+          <Field label="Tempat" value={lpd.master_tempat?.nama_tempat ?? "—"} />
           <Field
             label="Tanggal Kegiatan"
-            value={formatDateRange((lpd as any).tgl_kegiatan, (lpd as any).tgl_selesai)}
+            value={formatDateRange(lpd.tgl_kegiatan, lpd.tgl_selesai)}
           />
-          <Field label="Lama" value={`${(lpd as any).lama_hari} hari`} />
+          <Field label="Lama" value={`${lpd.lama_hari} hari`} />
           <Field
-            label="Kepala UPTD"
+            label="Kepala UPTD (penandatangan)"
             value={
-              (lpd as any).kepala
-                ? `${(lpd as any).kepala.nama} • NIP ${formatNip((lpd as any).kepala.nip)}`
+              lpd.kepala
+                ? `${lpd.kepala.nama} • NIP ${formatNip(lpd.kepala.nip)}`
                 : "—"
             }
           />
         </div>
-      </div>
+      </section>
 
-      <div className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
-        <h3 className="font-semibold text-on-surface">Petugas Ditugaskan</h3>
-        <div className="mt-3 divide-y divide-outline-variant">
-          {petugas.length === 0 && (
-            <p className="py-4 text-sm text-on-surface-variant">Belum ada petugas.</p>
-          )}
-          {petugas.map((p: any) => (
-            <div key={p.id_user} className="py-3 flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
-                {p.nama.slice(0, 1)}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-on-surface">{p.nama}</p>
-                <p className="text-xs text-on-surface-variant">
-                  NIP {formatNip(p.nip)} • {p.jabatan ?? "—"}
-                </p>
-              </div>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
-                {p.status_kepegawaian}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Petugas */}
+      <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
+        <h2 className="font-semibold text-on-surface mb-4">
+          Daftar Petugas Yang Ditugaskan
+          <span className="ml-2 text-xs font-normal text-on-surface-variant">
+            ({petugas.length} orang)
+          </span>
+        </h2>
+        {petugas.length === 0 ? (
+          <p className="text-sm text-on-surface-variant">Belum ada petugas.</p>
+        ) : petugas.length === 1 ? (
+          <PetugasSingleCard p={petugas[0]} />
+        ) : (
+          <div className="space-y-5">
+            {petugas.map((p, i) => (
+              <PetugasNumberedRow key={p.id_user} index={i + 1} p={p} />
+            ))}
+          </div>
+        )}
+      </section>
 
-      {(lpd as any).hasil_kegiatan && (
-        <div className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
-          <h3 className="font-semibold text-on-surface mb-2">Hasil Kegiatan</h3>
-          <p className="text-sm whitespace-pre-line">{(lpd as any).hasil_kegiatan}</p>
-        </div>
-      )}
+      {/* Laporan Hasil */}
+      <LaporanSection lpd={lpd} id={id} />
     </div>
   );
 }
@@ -111,5 +143,368 @@ function Field({ label, value }: { label: string; value: string }) {
       </p>
       <p className="mt-1 text-sm text-on-surface">{value}</p>
     </div>
+  );
+}
+
+const FIELD_LABELS: { key: string; label: string }[] = [
+  { key: "nama", label: "Nama" },
+  { key: "nip", label: "NIP" },
+  { key: "pangkat", label: "Pangkat / Golongan" },
+  { key: "jabatan", label: "Jabatan" },
+  { key: "unit", label: "Unit" },
+];
+
+function getPetugasValue(p: any, key: string): string {
+  if (key === "nama") return p.nama ?? "—";
+  if (key === "nip") return p.nip ? formatNip(p.nip) : "—";
+  if (key === "pangkat") return p.master_golongan?.nama_golongan ?? "—";
+  if (key === "jabatan") return p.jabatan ?? "—";
+  if (key === "unit") return p.unit ?? "—";
+  return "—";
+}
+
+function PetugasSingleCard({ p }: { p: any }) {
+  return (
+    <div className="border border-outline-variant rounded-lg p-5 bg-surface-container-low">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+          {(p.nama ?? "?").slice(0, 1)}
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase text-on-surface-variant">
+            Petugas Ditugaskan
+          </p>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
+            {p.status_kepegawaian}
+          </span>
+        </div>
+      </div>
+      <div className="space-y-2 text-sm">
+        {FIELD_LABELS.map((f) => (
+          <div
+            key={f.key}
+            className="grid items-baseline"
+            style={{ gridTemplateColumns: "160px 12px 1fr" }}
+          >
+            <span className="text-on-surface-variant">{f.label}</span>
+            <span className="text-on-surface-variant">:</span>
+            <span
+              className={cn(
+                "font-medium text-on-surface",
+                f.key === "nip" && "font-mono tabular-nums",
+              )}
+            >
+              {getPetugasValue(p, f.key)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PetugasNumberedRow({ index, p }: { index: number; p: any }) {
+  return (
+    <div className="border border-outline-variant rounded-lg p-4 bg-surface-container-low">
+      <div className="flex items-start gap-4">
+        <div className="h-8 w-8 shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
+          {index}
+        </div>
+        <div className="flex-1 space-y-1.5 text-sm">
+          {FIELD_LABELS.map((f) => (
+            <div
+              key={f.key}
+              className="grid items-baseline"
+              style={{ gridTemplateColumns: "160px 12px 1fr" }}
+            >
+              <span className="text-on-surface-variant">{f.label}</span>
+              <span className="text-on-surface-variant">:</span>
+              <span
+                className={cn(
+                  "font-medium text-on-surface",
+                  f.key === "nip" && "font-mono tabular-nums",
+                )}
+              >
+                {getPetugasValue(p, f.key)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant shrink-0">
+          {p.status_kepegawaian}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function LaporanSection({ lpd, id }: { lpd: any; id: string }) {
+  if (lpd.status_lpd === "Batal") {
+    return (
+      <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
+        <h2 className="font-semibold text-on-surface mb-2">
+          Laporan Hasil Pelaksanaan Tugas
+        </h2>
+        <p className="text-sm text-on-surface-variant">LPD ini telah dibatalkan.</p>
+      </section>
+    );
+  }
+  if (lpd.status_lpd === "Sudah") {
+    return <LaporanReadonly lpd={lpd} />;
+  }
+  return <LaporanForm id={id} lpd={lpd} />;
+}
+
+function LaporanReadonly({ lpd }: { lpd: any }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!lpd.url_foto) return;
+    let cancel = false;
+    supabase.storage
+      .from("laporan_lpd")
+      .createSignedUrl(lpd.url_foto, 3600)
+      .then(({ data }) => {
+        if (!cancel) setSignedUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [lpd.url_foto]);
+
+  return (
+    <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="font-semibold text-on-surface">
+          Laporan Hasil Pelaksanaan Tugas
+        </h2>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-full">
+          <span className="material-symbols-outlined !text-[14px]">check_circle</span>
+          Sudah Dilaporkan
+        </span>
+      </div>
+
+      <div>
+        <p className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold mb-1">
+          Hasil Kegiatan
+        </p>
+        <p className="text-sm whitespace-pre-line text-on-surface leading-relaxed">
+          {lpd.hasil_kegiatan ?? "—"}
+        </p>
+      </div>
+
+      {lpd.url_foto && (
+        <div>
+          <p className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold mb-2">
+            Dokumentasi
+          </p>
+          {signedUrl ? (
+            <a
+              href={signedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block aspect-video w-full max-w-2xl rounded-lg overflow-hidden border border-outline-variant bg-surface-container-low"
+            >
+              <img
+                src={signedUrl}
+                alt="Dokumentasi kegiatan"
+                className="w-full h-full object-cover"
+              />
+            </a>
+          ) : (
+            <p className="text-xs text-on-surface-variant">Memuat foto…</p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LaporanForm({ id, lpd }: { id: string; lpd: any }) {
+  const qc = useQueryClient();
+  const { data: me } = useCurrentUser();
+  const submit = useServerFn(submitLaporan);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [hasil, setHasil] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const canSubmit = hasil.trim().length >= MIN_HASIL && !!file;
+
+  const handleFile = (f: File | null) => {
+    if (!f) {
+      setFile(null);
+      setPreview(null);
+      return;
+    }
+    if (!f.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar");
+      return;
+    }
+    if (f.size > MAX_FOTO_MB * 1024 * 1024) {
+      toast.error(`Ukuran file maksimal ${MAX_FOTO_MB}MB`);
+      return;
+    }
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+  };
+
+  const mut = useMutation({
+    mutationFn: async () => {
+      if (!file) throw new Error("Foto belum dipilih");
+      // path: <tahun>/<bulan>/<slug>/<timestamp>.<ext>
+      const tahun = new Date(lpd.tgl_buat).getFullYear();
+      const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("laporan_lpd")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
+
+      await submit({
+        data: {
+          id,
+          hasil_kegiatan: hasil.trim(),
+          url_foto: path,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Laporan tersimpan", {
+        description: "LPD ditandai selesai.",
+      });
+      qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
+      qc.invalidateQueries({ queryKey: ["lpd-list"] });
+      qc.invalidateQueries({ queryKey: ["my-tasks"] });
+    },
+    onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
+  });
+
+  // Akses: hanya Admin atau petugas yang ditugaskan (RLS server-side, ini hanya UX)
+  void me;
+
+  return (
+    <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-5">
+      <div>
+        <h2 className="font-semibold text-on-surface">
+          Laporan Hasil Pelaksanaan Tugas
+        </h2>
+        <p className="text-xs text-on-surface-variant mt-1">
+          Isi hasil kegiatan dan unggah satu foto dokumentasi. Setelah disimpan,
+          status LPD berubah menjadi <strong>Sudah</strong>.
+        </p>
+      </div>
+
+      <div>
+        <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
+          Hasil Kegiatan
+        </label>
+        <Textarea
+          value={hasil}
+          onChange={(e) => setHasil(e.target.value)}
+          rows={6}
+          placeholder="Tuliskan ringkasan pelaksanaan kegiatan, hasil yang dicapai, dan tindak lanjut…"
+          className="mt-1.5"
+          maxLength={10000}
+        />
+        <div className="flex justify-between mt-1 text-xs">
+          <span
+            className={cn(
+              hasil.trim().length < MIN_HASIL
+                ? "text-destructive"
+                : "text-green-700",
+            )}
+          >
+            {hasil.trim().length < MIN_HASIL
+              ? `Minimal ${MIN_HASIL} karakter (kurang ${MIN_HASIL - hasil.trim().length})`
+              : "✓ Memenuhi minimum"}
+          </span>
+          <span className="text-on-surface-variant tabular-nums">
+            {hasil.length} / 10000
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
+          Foto Dokumentasi
+        </label>
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            handleFile(e.dataTransfer.files?.[0] ?? null);
+          }}
+          onClick={() => fileRef.current?.click()}
+          className={cn(
+            "mt-1.5 border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors text-center",
+            dragOver
+              ? "border-primary bg-primary/5"
+              : "border-outline-variant hover:border-primary/50 hover:bg-surface-container-low",
+          )}
+        >
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+          />
+          {preview ? (
+            <div className="flex items-center gap-4">
+              <img
+                src={preview}
+                alt="preview"
+                className="h-24 w-24 object-cover rounded-md border border-outline-variant"
+              />
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-on-surface">{file?.name}</p>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  {((file?.size ?? 0) / 1024).toFixed(0)} KB — klik untuk ganti
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFile(null);
+                }}
+                className="text-xs text-destructive hover:underline"
+              >
+                Hapus
+              </button>
+            </div>
+          ) : (
+            <>
+              <span className="material-symbols-outlined !text-[36px] text-on-surface-variant">
+                cloud_upload
+              </span>
+              <p className="text-sm font-medium text-on-surface mt-1">
+                Tarik & lepas foto di sini, atau klik untuk pilih
+              </p>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                JPG / PNG, maksimal {MAX_FOTO_MB}MB
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        disabled={!canSubmit || mut.isPending}
+        onClick={() => mut.mutate()}
+        className="h-11 px-6"
+      >
+        {mut.isPending ? "Menyimpan…" : "Simpan & Tandai Selesai"}
+      </Button>
+    </section>
   );
 }
