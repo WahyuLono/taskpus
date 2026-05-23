@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -257,12 +257,18 @@ function LaporanSection({ lpd, id }: { lpd: any; id: string }) {
 
 function LaporanReadonly({ lpd }: { lpd: any }) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  useMemo(() => {
+  useEffect(() => {
     if (!lpd.url_foto) return;
+    let cancel = false;
     supabase.storage
       .from("laporan_lpd")
       .createSignedUrl(lpd.url_foto, 3600)
-      .then(({ data }) => setSignedUrl(data?.signedUrl ?? null));
+      .then(({ data }) => {
+        if (!cancel) setSignedUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      cancel = true;
+    };
   }, [lpd.url_foto]);
 
   return (
