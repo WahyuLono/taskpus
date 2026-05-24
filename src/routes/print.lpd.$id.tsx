@@ -45,7 +45,7 @@ function PrintSptPage() {
           body { background: white !important; }
         }
         .spt-page {
-          font-family: "Times New Roman", Times, serif;
+          font-family: Arial, sans-serif;
           font-size: 12pt;
           line-height: 1.4;
           color: #000;
@@ -57,6 +57,8 @@ function PrintSptPage() {
         .spt-page h1 { font-size: 13pt; font-weight: bold; text-decoration: underline; text-align: center; margin: 0; }
         .spt-page table { border-collapse: collapse; }
         .spt-page td { vertical-align: top; padding: 2px 4px; }
+        .spt-page ol { margin: 0; padding-left: 20px; list-style-position: outside; }
+        .spt-page ol li { margin-bottom: 4px; }
       `}</style>
 
       <div className="no-print fixed top-3 right-3 flex gap-2 z-50">
@@ -78,44 +80,58 @@ function PrintSptPage() {
         {/* Kop Surat */}
         <header
           style={{
-            textAlign: "center",
             borderBottom: "3px double #000",
             paddingBottom: 6,
             marginBottom: 18,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
           }}
         >
-          <p style={{ margin: 0, fontWeight: "bold", fontSize: "14pt" }}>
-            PEMERINTAH KABUPATEN KOTAWARINGIN BARAT
-          </p>
-          <p style={{ margin: 0, fontWeight: "bold", fontSize: "13pt" }}>
-            DINAS KESEHATAN
-          </p>
-          <p style={{ margin: 0, fontWeight: "bold", fontSize: "16pt" }}>
-            PUSKESMAS KUMAI
-          </p>
-          <p style={{ margin: "4px 0 0", fontSize: "10pt" }}>
-            Jl. Pemuda RT 03, Kel. Kumai Hilir, Kec. Kumai 74181
-          </p>
-          <p style={{ margin: 0, fontSize: "10pt" }}>
-            Telp. (0532) 61179, Pos-el: puskesmaskumai.2019@gmail.com
-          </p>
+          {/* TODO: paste left logo URL (Pemkab Kotawaringin Barat) here */}
+          <img
+            src=""
+            alt="Logo Pemkab"
+            style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
+          />
+          <div style={{ flex: 1, textAlign: "center" }}>
+            <p style={{ margin: 0, fontWeight: "bold", fontSize: "14pt" }}>
+              PEMERINTAH KABUPATEN KOTAWARINGIN BARAT
+            </p>
+            <p style={{ margin: 0, fontWeight: "bold", fontSize: "13pt" }}>
+              DINAS KESEHATAN
+            </p>
+            <p style={{ margin: 0, fontWeight: "bold", fontSize: "16pt" }}>
+              PUSKESMAS KUMAI
+            </p>
+            <p style={{ margin: "4px 0 0", fontSize: "10pt" }}>
+              Jl. Pemuda RT 03, Kel. Kumai Hilir, Kec. Kumai 74181
+            </p>
+            <p style={{ margin: 0, fontSize: "10pt" }}>
+              Telp. (0532) 61179, Pos-el: puskesmaskumai.2019@gmail.com
+            </p>
+          </div>
+          {/* TODO: paste right logo URL (Puskesmas Kumai) here */}
+          <img
+            src=""
+            alt="Logo Puskesmas"
+            style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
+          />
         </header>
 
         {/* Judul */}
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           <h1>SURAT PERINTAH TUGAS</h1>
-          <p style={{ margin: "2px 0 0", textDecoration: "underline" }}>
-            Nomor : {lpd.no_surat}
-          </p>
+          <p style={{ margin: "2px 0 0" }}>Nomor : {lpd.no_surat}</p>
         </div>
 
         {/* Dasar */}
         <table style={{ width: "100%", marginBottom: 12 }}>
           <tbody>
             <tr>
-              <td style={{ width: 80, textDecoration: "underline" }}>Dasar :</td>
+              <td style={{ width: 80 }}>Dasar :</td>
               <td>
-                <ol style={{ margin: 0, paddingLeft: 18 }}>
+                <ol>
                   <li>
                     Keputusan Menteri Dalam Negeri Nomor 13 Tahun 2006 tentang
                     Pedoman Pengelola Keuangan Daerah.
@@ -143,9 +159,7 @@ function PrintSptPage() {
         <table style={{ width: "100%", marginBottom: 12 }}>
           <tbody>
             <tr>
-              <td style={{ width: 80, textDecoration: "underline" }}>
-                Kepada :
-              </td>
+              <td style={{ width: 80 }}>Kepada :</td>
               <td>
                 {petugas.length === 0 && <em>— belum ada petugas —</em>}
                 {petugas.map((p, i) => (
@@ -168,15 +182,13 @@ function PrintSptPage() {
                       </tr>
                       <tr>
                         <td />
-                        <td style={{ textDecoration: "underline" }}>
-                          Pangkat / Golongan
-                        </td>
+                        <td>Pangkat / Golongan</td>
                         <td>:</td>
                         <td>{p.master_golongan?.nama_golongan ?? "—"}</td>
                       </tr>
                       <tr>
                         <td />
-                        <td style={{ textDecoration: "underline" }}>Jabatan</td>
+                        <td>Jabatan</td>
                         <td>:</td>
                         <td>{p.jabatan ?? "—"}</td>
                       </tr>
@@ -198,17 +210,15 @@ function PrintSptPage() {
         <table style={{ width: "100%", marginBottom: 12 }}>
           <tbody>
             <tr>
-              <td style={{ width: 80, textDecoration: "underline" }}>
-                Untuk :
-              </td>
+              <td style={{ width: 80 }}>Untuk :</td>
               <td>
                 <p style={{ margin: "0 0 8px" }}>
                   Melaksanakan {lpd.jenis_perjadin}{" "}
-                  {lpd.master_rangka?.nama_rangka ?? ""} di{" "}
+                  <strong>{lpd.master_rangka?.nama_rangka ?? ""}</strong> di{" "}
                   {lpd.master_tempat?.nama_tempat ?? ""} Pada Tanggal :{" "}
                   {formatDate(lpd.tgl_kegiatan)}
                 </p>
-                <ol style={{ margin: 0, paddingLeft: 18 }}>
+                <ol>
                   <li>
                     Lamanya perjalanan dinas selama ({lpd.lama_hari}) (dalam
                     bilangan lama hari) hari.
@@ -227,50 +237,37 @@ function PrintSptPage() {
           </tbody>
         </table>
 
-        {/* Footer ttd */}
-        <table style={{ width: "100%", marginTop: 30 }}>
-          <tbody>
-            <tr>
-              <td style={{ width: "50%" }} />
-              <td>
-                <table>
-                  <tbody>
-                    <tr>
-                      <td style={{ width: 110, textDecoration: "underline" }}>
-                        Dikeluarkan
-                      </td>
-                      <td>:</td>
-                      <td>Kumai</td>
-                    </tr>
-                    <tr>
-                      <td>Pada Tanggal</td>
-                      <td>:</td>
-                      <td>{formatDate(lpd.tgl_buat)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style={{ paddingTop: 12 }}>Mengetahui,</td>
-              <td style={{ paddingTop: 12 }}>
-                Kepala UPTD Puskesmas Kumai
-              </td>
-            </tr>
-            <tr>
-              <td style={{ paddingTop: 70, textAlign: "center" }}>
-                (……………………………)
-              </td>
-              <td style={{ paddingTop: 70, textAlign: "center" }}>
-                <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
-                  {lpd.kepala?.nama ?? "—"}
-                </div>
-                <div>{lpd.kepala?.master_golongan?.nama_golongan ?? ""}</div>
-                <div>NIP {lpd.kepala?.nip ? formatNip(lpd.kepala.nip) : "—"}</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {/* Footer ttd — right aligned block, inner text centered */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 30 }}>
+          <div style={{ minWidth: 280 }}>
+            <table style={{ marginBottom: 12 }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: 110 }}>Dikeluarkan</td>
+                  <td>:</td>
+                  <td>Kumai</td>
+                </tr>
+                <tr>
+                  <td>Pada Tanggal</td>
+                  <td>:</td>
+                  <td>{formatDate(lpd.tgl_buat)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style={{ textAlign: "center" }}>
+              <div>Mengetahui,</div>
+              <div>Kepala UPTD Puskesmas Kumai</div>
+              <div style={{ height: 70 }} />
+              <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
+                {lpd.kepala?.nama ?? "—"}
+              </div>
+              <div>{lpd.kepala?.master_golongan?.nama_golongan ?? ""}</div>
+              <div>
+                NIP {lpd.kepala?.nip ? formatNip(lpd.kepala.nip) : "—"}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
