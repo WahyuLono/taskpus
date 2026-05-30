@@ -246,12 +246,12 @@ function PrintSptPage() {
           <table style={{ width: 300, marginBottom: 20 }}>
             <tbody>
               <tr>
-                <td style={{ width: 100 }}>Dikeluarkan</td>
-                <td style={{ width: 10 }}>:</td>
+                <td style={{ width: 110, whiteSpace: "nowrap" }}>Dikeluarkan</td>
+                <td>:</td>
                 <td>Kumai</td>
               </tr>
               <tr>
-                <td>Pada Tanggal</td>
+                <td style={{ whiteSpace: "nowrap" }}>Pada Tanggal</td>
                 <td>:</td>
                 <td>{formatDate(lpd.tgl_buat)}</td>
               </tr>
