@@ -62,7 +62,7 @@ function PrintSptPage() {
         .spt-page h1 { font-size: 13pt; font-weight: bold; text-decoration: underline; text-align: center; margin: 0; }
         .spt-page table { border-collapse: collapse; }
         .spt-page td { vertical-align: top; padding: 2px 4px; }
-        .spt-page ol { margin: 0; padding-left: 20px; list-style-position: outside; }
+        .spt-page ol { margin: 0; padding-left: 24px; list-style-position: outside; list-style-type: decimal !important; }
         .spt-page ol li { margin-bottom: 4px; }
       `}</style>
 
