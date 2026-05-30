@@ -16,8 +16,47 @@ export const Route = createFileRoute("/_authenticated/lpd/$id")({
   component: LpdDetailPage,
 });
 
-const MIN_HASIL = 150;
 const MAX_FOTO_MB = 5;
+const FIELD_MAX = 500;
+
+type LaporanForm = {
+  alat: string;
+  metode: string;
+  lama_kegiatan: string;
+  sasaran: string;
+  hambatan: string;
+  output: string;
+  tindak_lanjut: string;
+};
+
+const EMPTY_LAPORAN: LaporanForm = {
+  alat: "",
+  metode: "",
+  lama_kegiatan: "",
+  sasaran: "",
+  hambatan: "",
+  output: "",
+  tindak_lanjut: "",
+};
+
+function parseLaporan(raw: string | null | undefined): {
+  parsed: LaporanForm | null;
+  rawText: string;
+} {
+  if (!raw) return { parsed: null, rawText: "" };
+  try {
+    const obj = JSON.parse(raw);
+    if (obj && typeof obj === "object" && "alat" in obj) {
+      return {
+        parsed: { ...EMPTY_LAPORAN, ...obj },
+        rawText: raw,
+      };
+    }
+  } catch {
+    /* fallthrough */
+  }
+  return { parsed: null, rawText: raw };
+}
 
 function LpdDetailPage() {
   const { id } = Route.useParams();
@@ -134,7 +173,7 @@ function LpdDetailPage() {
       </section>
 
       {/* Laporan Hasil */}
-      <LaporanSection lpd={lpd} id={id} />
+      <LaporanSection lpd={lpd} id={id} petugasCount={petugas.length} />
     </div>
   );
 }
@@ -242,7 +281,15 @@ function PetugasNumberedRow({ index, p }: { index: number; p: any }) {
   );
 }
 
-function LaporanSection({ lpd, id }: { lpd: any; id: string }) {
+function LaporanSection({
+  lpd,
+  id,
+  petugasCount,
+}: {
+  lpd: any;
+  id: string;
+  petugasCount: number;
+}) {
   if (lpd.status_lpd === "Batal") {
     return (
       <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
@@ -254,12 +301,96 @@ function LaporanSection({ lpd, id }: { lpd: any; id: string }) {
     );
   }
   if (lpd.status_lpd === "Sudah") {
-    return <LaporanReadonly lpd={lpd} />;
+    return <LaporanReadonly lpd={lpd} petugasCount={petugasCount} />;
   }
-  return <LaporanForm id={id} lpd={lpd} />;
+  return <LaporanFormView id={id} lpd={lpd} petugasCount={petugasCount} />;
 }
 
-function LaporanReadonly({ lpd }: { lpd: any }) {
+// ----- Locked auto-field row -----
+function LockedRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold mb-1">
+        {label}
+      </p>
+      <div className="flex items-center gap-2 rounded-md border border-outline-variant bg-surface-container-low px-3 py-2 text-sm text-on-surface">
+        <span className="material-symbols-outlined !text-[16px] text-on-surface-variant">
+          lock
+        </span>
+        <span className="font-medium">{value}</span>
+        <span className="ml-auto text-[10px] uppercase tracking-wide text-on-surface-variant">
+          Otomatis
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function EditableField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows = 2,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  rows?: number;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
+        {label}
+      </label>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder}
+        maxLength={FIELD_MAX}
+        disabled={disabled}
+        className="mt-1.5"
+      />
+      <div className="flex justify-end mt-1 text-xs text-on-surface-variant tabular-nums">
+        {value.length} / {FIELD_MAX}
+      </div>
+    </div>
+  );
+}
+
+function GroupHeading({ label, title }: { label: string; title: string }) {
+  return (
+    <div className="flex items-baseline gap-2 border-b border-outline-variant pb-2">
+      <span className="text-lg font-bold text-primary">{label}.</span>
+      <h3 className="font-semibold text-on-surface">{title}</h3>
+    </div>
+  );
+}
+
+function ReadonlyText({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold mb-1">
+        {label}
+      </p>
+      <p className="text-sm whitespace-pre-line text-on-surface leading-relaxed">
+        {value?.trim() ? value : "—"}
+      </p>
+    </div>
+  );
+}
+
+function LaporanReadonly({
+  lpd,
+  petugasCount,
+}: {
+  lpd: any;
+  petugasCount: number;
+}) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!lpd.url_foto) return;
@@ -275,8 +406,12 @@ function LaporanReadonly({ lpd }: { lpd: any }) {
     };
   }, [lpd.url_foto]);
 
+  const { parsed, rawText } = parseLaporan(lpd.hasil_kegiatan);
+  const jadwal = formatDate(lpd.tgl_kegiatan);
+  const tempat = lpd.master_tempat?.nama_tempat ?? "—";
+
   return (
-    <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-5">
+    <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-semibold text-on-surface">
           Laporan Hasil Pelaksanaan Tugas
@@ -287,14 +422,36 @@ function LaporanReadonly({ lpd }: { lpd: any }) {
         </span>
       </div>
 
-      <div>
-        <p className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold mb-1">
-          Hasil Kegiatan
-        </p>
-        <p className="text-sm whitespace-pre-line text-on-surface leading-relaxed">
-          {lpd.hasil_kegiatan ?? "—"}
-        </p>
-      </div>
+      {parsed ? (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <GroupHeading label="A" title="Input" />
+            <ReadonlyText label="1. Pelaksana Kegiatan" value={`${petugasCount} Orang`} />
+            <ReadonlyText label="2. Sumber Dana" value="BOK" />
+            <ReadonlyText label="3. Alat yang Digunakan" value={parsed.alat} />
+            <ReadonlyText label="4. Metode" value={parsed.metode} />
+            <ReadonlyText label="5. Lama Kegiatan" value={parsed.lama_kegiatan} />
+          </div>
+          <div className="space-y-4">
+            <GroupHeading label="B" title="Proses" />
+            <ReadonlyText label="1. Sasaran" value={parsed.sasaran} />
+            <ReadonlyText label="2. Jadwal" value={jadwal} />
+            <ReadonlyText label="3. Tempat Pelaksanaan" value={tempat} />
+            <ReadonlyText label="4. Hambatan" value={parsed.hambatan} />
+          </div>
+          <div className="space-y-4">
+            <GroupHeading label="C" title="Output" />
+            <ReadonlyText label="Output" value={parsed.output} />
+          </div>
+          <div className="space-y-4">
+            <GroupHeading label="D" title="Tindak Lanjut" />
+            <ReadonlyText label="Tindak Lanjut" value={parsed.tindak_lanjut} />
+          </div>
+        </div>
+      ) : (
+        // Legacy LPD (pre-restructure): show raw text as-is
+        <ReadonlyText label="Hasil Kegiatan" value={rawText || "—"} />
+      )}
 
       {lpd.url_foto && (
         <div>
@@ -323,17 +480,34 @@ function LaporanReadonly({ lpd }: { lpd: any }) {
   );
 }
 
-function LaporanForm({ id, lpd }: { id: string; lpd: any }) {
+function LaporanFormView({
+  id,
+  lpd,
+  petugasCount,
+}: {
+  id: string;
+  lpd: any;
+  petugasCount: number;
+}) {
   const qc = useQueryClient();
   const { data: me } = useCurrentUser();
   const submit = useServerFn(submitLaporan);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [hasil, setHasil] = useState("");
+  const [form, setForm] = useState<LaporanForm>(EMPTY_LAPORAN);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  const canSubmit = hasil.trim().length >= MIN_HASIL && !!file;
+  const jadwal = formatDate(lpd.tgl_kegiatan);
+  const tempat = lpd.master_tempat?.nama_tempat ?? "—";
+
+  const setField = (key: keyof LaporanForm) => (v: string) =>
+    setForm((s) => ({ ...s, [key]: v }));
+
+  const allFilled = (Object.keys(EMPTY_LAPORAN) as (keyof LaporanForm)[]).every(
+    (k) => form[k].trim().length >= 1,
+  );
+  const canSubmit = allFilled && !!file;
 
   const handleFile = (f: File | null) => {
     if (!f) {
@@ -356,7 +530,6 @@ function LaporanForm({ id, lpd }: { id: string; lpd: any }) {
   const mut = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Foto belum dipilih");
-      // path: <tahun>/<bulan>/<slug>/<timestamp>.<ext>
       const tahun = new Date(lpd.tgl_buat).getFullYear();
       const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -367,10 +540,22 @@ function LaporanForm({ id, lpd }: { id: string; lpd: any }) {
         .upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
 
+      // TEMP: serialize structured form to existing `hasil_kegiatan` column.
+      // Backend migration to per-column fields is in a separate plan.
+      const payload = JSON.stringify({
+        alat: form.alat.trim(),
+        metode: form.metode.trim(),
+        lama_kegiatan: form.lama_kegiatan.trim(),
+        sasaran: form.sasaran.trim(),
+        hambatan: form.hambatan.trim(),
+        output: form.output.trim(),
+        tindak_lanjut: form.tindak_lanjut.trim(),
+      });
+
       await submit({
         data: {
           id,
-          hasil_kegiatan: hasil.trim(),
+          hasil_kegiatan: payload,
           url_foto: path,
         },
       });
@@ -386,51 +571,89 @@ function LaporanForm({ id, lpd }: { id: string; lpd: any }) {
     onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
   });
 
-  // Akses: hanya Admin atau petugas yang ditugaskan (RLS server-side, ini hanya UX)
   void me;
 
   return (
-    <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-5">
+    <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-6">
       <div>
         <h2 className="font-semibold text-on-surface">
           Laporan Hasil Pelaksanaan Tugas
         </h2>
         <p className="text-xs text-on-surface-variant mt-1">
-          Isi hasil kegiatan dan unggah satu foto dokumentasi. Setelah disimpan,
-          status LPD berubah menjadi <strong>Sudah</strong>.
+          Lengkapi seluruh isian laporan dan unggah satu foto dokumentasi. Setelah
+          disimpan, status LPD berubah menjadi <strong>Sudah</strong>.
         </p>
       </div>
 
-      <div>
-        <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
-          Hasil Kegiatan
-        </label>
-        <Textarea
-          value={hasil}
-          onChange={(e) => setHasil(e.target.value)}
-          rows={6}
-          placeholder="Tuliskan ringkasan pelaksanaan kegiatan, hasil yang dicapai, dan tindak lanjut…"
-          className="mt-1.5"
-          maxLength={10000}
+      {/* A. Input */}
+      <div className="space-y-4">
+        <GroupHeading label="A" title="Input" />
+        <LockedRow label="1. Pelaksana Kegiatan" value={`${petugasCount} Orang`} />
+        <LockedRow label="2. Sumber Dana" value="BOK" />
+        <EditableField
+          label="3. Alat yang Digunakan"
+          value={form.alat}
+          onChange={setField("alat")}
+          placeholder="Contoh: tensimeter, stetoskop, alat tulis…"
         />
-        <div className="flex justify-between mt-1 text-xs">
-          <span
-            className={cn(
-              hasil.trim().length < MIN_HASIL
-                ? "text-destructive"
-                : "text-green-700",
-            )}
-          >
-            {hasil.trim().length < MIN_HASIL
-              ? `Minimal ${MIN_HASIL} karakter (kurang ${MIN_HASIL - hasil.trim().length})`
-              : "✓ Memenuhi minimum"}
-          </span>
-          <span className="text-on-surface-variant tabular-nums">
-            {hasil.length} / 10000
-          </span>
-        </div>
+        <EditableField
+          label="4. Metode"
+          value={form.metode}
+          onChange={setField("metode")}
+          placeholder="Contoh: penyuluhan, pemeriksaan langsung, wawancara…"
+        />
+        <EditableField
+          label="5. Lama Kegiatan"
+          value={form.lama_kegiatan}
+          onChange={setField("lama_kegiatan")}
+          placeholder="Contoh: 2 jam, ±90 menit…"
+        />
       </div>
 
+      {/* B. Proses */}
+      <div className="space-y-4">
+        <GroupHeading label="B" title="Proses" />
+        <EditableField
+          label="1. Sasaran"
+          value={form.sasaran}
+          onChange={setField("sasaran")}
+          placeholder="Kelompok / individu yang menjadi sasaran kegiatan"
+        />
+        <LockedRow label="2. Jadwal" value={jadwal} />
+        <LockedRow label="3. Tempat Pelaksanaan" value={tempat} />
+        <EditableField
+          label="4. Hambatan"
+          value={form.hambatan}
+          onChange={setField("hambatan")}
+          placeholder="Hambatan yang dijumpai selama kegiatan"
+        />
+      </div>
+
+      {/* C. Output */}
+      <div className="space-y-4">
+        <GroupHeading label="C" title="Output" />
+        <EditableField
+          label="Output"
+          value={form.output}
+          onChange={setField("output")}
+          placeholder="Hasil / capaian dari kegiatan"
+          rows={3}
+        />
+      </div>
+
+      {/* D. Tindak Lanjut */}
+      <div className="space-y-4">
+        <GroupHeading label="D" title="Tindak Lanjut" />
+        <EditableField
+          label="Tindak Lanjut"
+          value={form.tindak_lanjut}
+          onChange={setField("tindak_lanjut")}
+          placeholder="Rencana tindak lanjut setelah kegiatan"
+          rows={3}
+        />
+      </div>
+
+      {/* Foto Dokumentasi */}
       <div>
         <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
           Foto Dokumentasi
@@ -500,6 +723,14 @@ function LaporanForm({ id, lpd }: { id: string; lpd: any }) {
           )}
         </div>
       </div>
+
+      {!canSubmit && (
+        <p className="text-xs text-destructive">
+          {allFilled
+            ? "Foto dokumentasi belum dipilih."
+            : "Semua isian laporan wajib diisi."}
+        </p>
+      )}
 
       <Button
         type="button"
