@@ -93,9 +93,9 @@ function PrintSptPage() {
             gap: 12,
           }}
         >
-          {/* TODO: paste left logo URL (Pemkab Kotawaringin Barat) here */}
+          {/* TODO: paste logo URL here */}
           <img
-            src=""
+            src="https://placehold.co/75x75.png?text=LOGO+1"
             alt="Logo Pemkab"
             style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
           />
