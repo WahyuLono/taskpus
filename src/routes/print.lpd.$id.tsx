@@ -264,7 +264,7 @@ function PrintSptPage() {
           {/* COLUMN LEFT: Mengetahui */}
           <div style={{ width: 250, textAlign: "center" }}>
             <div>Mengetahui,</div>
-            <div style={{ height: 80 }} />
+            <div style={{ height: 60 }} />
             <div>( ............................................ )</div>
           </div>
           {/* COLUMN RIGHT: Kepala UPTD */}
