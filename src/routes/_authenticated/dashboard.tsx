@@ -15,10 +15,12 @@ function DashboardPage() {
   const fetchStats = useServerFn(getDashboardStats);
   const fetchList = useServerFn(listLpd);
 
-  const stats = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats() });
+  const enabled = !!me;
+  const stats = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats(), enabled });
   const recent = useQuery({
     queryKey: ["lpd-recent"],
     queryFn: () => fetchList({ data: { limit: 8 } }),
+    enabled,
   });
 
   const cards = [
