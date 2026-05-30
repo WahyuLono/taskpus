@@ -21,6 +21,7 @@ import { Route as PrintLpdIdRouteImport } from './routes/print.lpd.$id'
 import { Route as AuthenticatedMasterUserRouteImport } from './routes/_authenticated/master.user'
 import { Route as AuthenticatedMasterTempatRouteImport } from './routes/_authenticated/master.tempat'
 import { Route as AuthenticatedMasterRangkaRouteImport } from './routes/_authenticated/master.rangka'
+import { Route as AuthenticatedMasterNomorSuratRouteImport } from './routes/_authenticated/master.nomor-surat'
 import { Route as AuthenticatedMasterGolonganRouteImport } from './routes/_authenticated/master.golongan'
 import { Route as AuthenticatedLpdBaruRouteImport } from './routes/_authenticated/lpd.baru'
 import { Route as AuthenticatedLpdIdRouteImport } from './routes/_authenticated/lpd.$id'
@@ -87,6 +88,12 @@ const AuthenticatedMasterRangkaRoute =
     path: '/master/rangka',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedMasterNomorSuratRoute =
+  AuthenticatedMasterNomorSuratRouteImport.update({
+    id: '/master/nomor-surat',
+    path: '/master/nomor-surat',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedMasterGolonganRoute =
   AuthenticatedMasterGolonganRouteImport.update({
     id: '/master/golongan',
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
+  '/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
@@ -129,6 +137,7 @@ export interface FileRoutesByTo {
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
+  '/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
@@ -147,6 +156,7 @@ export interface FileRoutesById {
   '/_authenticated/lpd/$id': typeof AuthenticatedLpdIdRoute
   '/_authenticated/lpd/baru': typeof AuthenticatedLpdBaruRoute
   '/_authenticated/master/golongan': typeof AuthenticatedMasterGolonganRoute
+  '/_authenticated/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
   '/_authenticated/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/_authenticated/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/_authenticated/master/user': typeof AuthenticatedMasterUserRoute
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/lpd/$id'
     | '/lpd/baru'
     | '/master/golongan'
+    | '/master/nomor-surat'
     | '/master/rangka'
     | '/master/tempat'
     | '/master/user'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/lpd/$id'
     | '/lpd/baru'
     | '/master/golongan'
+    | '/master/nomor-surat'
     | '/master/rangka'
     | '/master/tempat'
     | '/master/user'
@@ -198,6 +210,7 @@ export interface FileRouteTypes {
     | '/_authenticated/lpd/$id'
     | '/_authenticated/lpd/baru'
     | '/_authenticated/master/golongan'
+    | '/_authenticated/master/nomor-surat'
     | '/_authenticated/master/rangka'
     | '/_authenticated/master/tempat'
     | '/_authenticated/master/user'
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMasterRangkaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/master/nomor-surat': {
+      id: '/_authenticated/master/nomor-surat'
+      path: '/master/nomor-surat'
+      fullPath: '/master/nomor-surat'
+      preLoaderRoute: typeof AuthenticatedMasterNomorSuratRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/master/golongan': {
       id: '/_authenticated/master/golongan'
       path: '/master/golongan'
@@ -330,6 +350,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedLpdIdRoute: typeof AuthenticatedLpdIdRoute
   AuthenticatedLpdBaruRoute: typeof AuthenticatedLpdBaruRoute
   AuthenticatedMasterGolonganRoute: typeof AuthenticatedMasterGolonganRoute
+  AuthenticatedMasterNomorSuratRoute: typeof AuthenticatedMasterNomorSuratRoute
   AuthenticatedMasterRangkaRoute: typeof AuthenticatedMasterRangkaRoute
   AuthenticatedMasterTempatRoute: typeof AuthenticatedMasterTempatRoute
   AuthenticatedMasterUserRoute: typeof AuthenticatedMasterUserRoute
@@ -344,6 +365,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedLpdIdRoute: AuthenticatedLpdIdRoute,
   AuthenticatedLpdBaruRoute: AuthenticatedLpdBaruRoute,
   AuthenticatedMasterGolonganRoute: AuthenticatedMasterGolonganRoute,
+  AuthenticatedMasterNomorSuratRoute: AuthenticatedMasterNomorSuratRoute,
   AuthenticatedMasterRangkaRoute: AuthenticatedMasterRangkaRoute,
   AuthenticatedMasterTempatRoute: AuthenticatedMasterTempatRoute,
   AuthenticatedMasterUserRoute: AuthenticatedMasterUserRoute,

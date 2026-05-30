@@ -30,6 +30,12 @@ const ITEMS = [
     desc: "Kelola akun pegawai (Admin / Petugas)",
     icon: "group",
   },
+  {
+    to: "/master/nomor-surat",
+    title: "Setting Nomor Surat",
+    desc: "Atur jatah & range nomor surat per tahun",
+    icon: "confirmation_number",
+  },
 ];
 
 function MasterIndex() {
