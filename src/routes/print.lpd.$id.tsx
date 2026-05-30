@@ -136,7 +136,7 @@ function PrintSptPage() {
             <tr>
               <td style={{ width: 80 }}>Dasar :</td>
               <td>
-                <ol>
+                <ol className="list-decimal">
                   <li>
                     Keputusan Menteri Dalam Negeri Nomor 13 Tahun 2006 tentang
                     Pedoman Pengelola Keuangan Daerah.
