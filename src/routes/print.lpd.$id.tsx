@@ -116,9 +116,9 @@ function PrintSptPage() {
               Telp. (0532) 61179, Pos-el: puskesmaskumai.2019@gmail.com
             </p>
           </div>
-          {/* TODO: paste right logo URL (Puskesmas Kumai) here */}
+          {/* TODO: paste logo URL here */}
           <img
-            src=""
+            src="https://placehold.co/75x75.png?text=LOGO+2"
             alt="Logo Puskesmas"
             style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
           />
