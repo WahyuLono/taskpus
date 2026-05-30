@@ -241,13 +241,20 @@ function PrintSptPage() {
           </tbody>
         </table>
 
-        {/* Footer ttd — right aligned block, inner text centered */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 30 }}>
-          <div style={{ minWidth: 280 }}>
-            <table style={{ marginBottom: 12 }}>
+        {/* Footer ttd — Split into Left (Mengetahui) and Right (Kepala UPTD) */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 40, pageBreakInside: "avoid" }}>
+          {/* COLUMN LEFT: Mengetahui */}
+          <div style={{ width: 250, textAlign: "center" }}>
+            <div>Mengetahui,</div>
+            <div style={{ height: 100 }} />
+            <div>( ............................................ )</div>
+          </div>
+          {/* COLUMN RIGHT: Dikeluarkan & Kepala UPTD */}
+          <div style={{ width: 300 }}>
+            <table style={{ marginBottom: 12, marginLeft: "auto" }}>
               <tbody>
                 <tr>
-                  <td style={{ width: 110 }}>Dikeluarkan</td>
+                  <td style={{ width: 100 }}>Dikeluarkan</td>
                   <td>:</td>
                   <td>Kumai</td>
                 </tr>
@@ -258,10 +265,10 @@ function PrintSptPage() {
                 </tr>
               </tbody>
             </table>
-            <div style={{ textAlign: "center" }}>
-              <div>Mengetahui,</div>
+
+            <div style={{ textAlign: "center", marginTop: 16 }}>
               <div>Kepala UPTD Puskesmas Kumai</div>
-              <div style={{ height: 70 }} />
+              <div style={{ height: 75 }} />
               <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
                 {lpd.kepala?.nama ?? "—"}
               </div>
