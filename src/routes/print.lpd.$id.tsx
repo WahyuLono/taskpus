@@ -223,10 +223,9 @@ function PrintSptPage() {
                   {lpd.master_tempat?.nama_tempat ?? ""} Pada Tanggal :{" "}
                   {formatDate(lpd.tgl_kegiatan)}
                 </p>
-                <ol>
+                <ol className="list-decimal">
                   <li>
-                    Lamanya perjalanan dinas selama ({lpd.lama_hari}) (dalam
-                    bilangan lama hari) hari.
+                    Lamanya perjalanan dinas selama {lpd.lama_hari} ({terbilang(lpd.lama_hari)}) hari.
                   </li>
                   <li>
                     Melaporkan hasil pelaksanaan tugas kepada Kepala Puskesmas.
