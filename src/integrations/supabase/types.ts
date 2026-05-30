@@ -203,57 +203,75 @@ export type Database = {
         Row: {
           created_at: string | null
           deleted_at: string | null
-          hasil_kegiatan: string | null
           id_kepala: string | null
           id_lpd: string
           id_rangka: number | null
           id_tempat: number | null
+          input_alat: string | null
+          input_lama_kegiatan: string | null
+          input_metode: string | null
           jenis_perjadin: string
           lama_hari: number
           no_surat: string
           no_surat_slug: string
+          output: string | null
+          proses_hambatan: string | null
+          proses_sasaran: string | null
           status_lpd: Database["public"]["Enums"]["status_surat"] | null
           tgl_buat: string
           tgl_kegiatan: string
           tgl_selesai: string
+          tindak_lanjut: string | null
           updated_at: string | null
           url_foto: string | null
         }
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
-          hasil_kegiatan?: string | null
           id_kepala?: string | null
           id_lpd?: string
           id_rangka?: number | null
           id_tempat?: number | null
+          input_alat?: string | null
+          input_lama_kegiatan?: string | null
+          input_metode?: string | null
           jenis_perjadin: string
           lama_hari: number
           no_surat: string
           no_surat_slug: string
+          output?: string | null
+          proses_hambatan?: string | null
+          proses_sasaran?: string | null
           status_lpd?: Database["public"]["Enums"]["status_surat"] | null
           tgl_buat: string
           tgl_kegiatan: string
           tgl_selesai: string
+          tindak_lanjut?: string | null
           updated_at?: string | null
           url_foto?: string | null
         }
         Update: {
           created_at?: string | null
           deleted_at?: string | null
-          hasil_kegiatan?: string | null
           id_kepala?: string | null
           id_lpd?: string
           id_rangka?: number | null
           id_tempat?: number | null
+          input_alat?: string | null
+          input_lama_kegiatan?: string | null
+          input_metode?: string | null
           jenis_perjadin?: string
           lama_hari?: number
           no_surat?: string
           no_surat_slug?: string
+          output?: string | null
+          proses_hambatan?: string | null
+          proses_sasaran?: string | null
           status_lpd?: Database["public"]["Enums"]["status_surat"] | null
           tgl_buat?: string
           tgl_kegiatan?: string
           tgl_selesai?: string
+          tindak_lanjut?: string | null
           updated_at?: string | null
           url_foto?: string | null
         }

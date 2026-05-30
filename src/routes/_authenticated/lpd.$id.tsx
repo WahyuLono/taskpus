@@ -39,23 +39,18 @@ const EMPTY_LAPORAN: LaporanForm = {
   tindak_lanjut: "",
 };
 
-function parseLaporan(raw: string | null | undefined): {
-  parsed: LaporanForm | null;
-  rawText: string;
-} {
-  if (!raw) return { parsed: null, rawText: "" };
-  try {
-    const obj = JSON.parse(raw);
-    if (obj && typeof obj === "object" && "alat" in obj) {
-      return {
-        parsed: { ...EMPTY_LAPORAN, ...obj },
-        rawText: raw,
-      };
-    }
-  } catch {
-    /* fallthrough */
-  }
-  return { parsed: null, rawText: raw };
+function readLaporan(lpd: any): LaporanForm | null {
+  const out: LaporanForm = {
+    alat: lpd.input_alat ?? "",
+    metode: lpd.input_metode ?? "",
+    lama_kegiatan: lpd.input_lama_kegiatan ?? "",
+    sasaran: lpd.proses_sasaran ?? "",
+    hambatan: lpd.proses_hambatan ?? "",
+    output: lpd.output ?? "",
+    tindak_lanjut: lpd.tindak_lanjut ?? "",
+  };
+  const anyFilled = (Object.values(out) as string[]).some((v) => v.trim().length > 0);
+  return anyFilled ? out : null;
 }
 
 function LpdDetailPage() {
@@ -406,7 +401,7 @@ function LaporanReadonly({
     };
   }, [lpd.url_foto]);
 
-  const { parsed, rawText } = parseLaporan(lpd.hasil_kegiatan);
+  const parsed = readLaporan(lpd);
   const jadwal = formatDate(lpd.tgl_kegiatan);
   const tempat = lpd.master_tempat?.nama_tempat ?? "—";
 
@@ -449,8 +444,7 @@ function LaporanReadonly({
           </div>
         </div>
       ) : (
-        // Legacy LPD (pre-restructure): show raw text as-is
-        <ReadonlyText label="Hasil Kegiatan" value={rawText || "—"} />
+        <p className="text-sm text-on-surface-variant">Laporan belum diisi.</p>
       )}
 
       {lpd.url_foto && (
@@ -540,23 +534,20 @@ function LaporanFormView({
         .upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
 
-      // TEMP: serialize structured form to existing `hasil_kegiatan` column.
-      // Backend migration to per-column fields is in a separate plan.
-      const payload = JSON.stringify({
-        alat: form.alat.trim(),
-        metode: form.metode.trim(),
-        lama_kegiatan: form.lama_kegiatan.trim(),
-        sasaran: form.sasaran.trim(),
-        hambatan: form.hambatan.trim(),
-        output: form.output.trim(),
-        tindak_lanjut: form.tindak_lanjut.trim(),
-      });
-
+      // Submit structured laporan per-field
       await submit({
         data: {
           id,
-          hasil_kegiatan: payload,
           url_foto: path,
+          laporan: {
+            alat: form.alat.trim(),
+            metode: form.metode.trim(),
+            lama_kegiatan: form.lama_kegiatan.trim(),
+            sasaran: form.sasaran.trim(),
+            hambatan: form.hambatan.trim(),
+            output: form.output.trim(),
+            tindak_lanjut: form.tindak_lanjut.trim(),
+          },
         },
       });
     },

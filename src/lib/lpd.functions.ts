@@ -96,10 +96,20 @@ export const getLpdDetail = createServerFn({ method: "GET" })
     };
   });
 
+const LaporanFieldsSchema = z.object({
+  alat: z.string().trim().min(1).max(500),
+  metode: z.string().trim().min(1).max(500),
+  lama_kegiatan: z.string().trim().min(1).max(500),
+  sasaran: z.string().trim().min(1).max(500),
+  hambatan: z.string().trim().min(1).max(500),
+  output: z.string().trim().min(1).max(500),
+  tindak_lanjut: z.string().trim().min(1).max(500),
+});
+
 const SubmitLaporanSchema = z.object({
   id: z.string().uuid(),
-  hasil_kegiatan: z.string().min(150).max(10000),
   url_foto: z.string().min(1).max(500),
+  laporan: LaporanFieldsSchema,
 });
 
 export const submitLaporan = createServerFn({ method: "POST" })
@@ -121,7 +131,13 @@ export const submitLaporan = createServerFn({ method: "POST" })
       .from("transaksi_lpd")
       .update({
         status_lpd: "Sudah",
-        hasil_kegiatan: data.hasil_kegiatan,
+        input_alat: data.laporan.alat,
+        input_metode: data.laporan.metode,
+        input_lama_kegiatan: data.laporan.lama_kegiatan,
+        proses_sasaran: data.laporan.sasaran,
+        proses_hambatan: data.laporan.hambatan,
+        output: data.laporan.output,
+        tindak_lanjut: data.laporan.tindak_lanjut,
         url_foto: data.url_foto,
         updated_at: new Date().toISOString(),
       })
@@ -140,7 +156,7 @@ export const listMyTasks = createServerFn({ method: "GET" })
         `id_lpd,
          transaksi_lpd:id_lpd(
            id_lpd, no_surat, no_surat_slug, jenis_perjadin, tgl_kegiatan, tgl_selesai,
-           lama_hari, status_lpd, url_foto, hasil_kegiatan,
+           lama_hari, status_lpd, url_foto,
            master_rangka:id_rangka(nama_rangka),
            master_tempat:id_tempat(nama_tempat)
          )`,
@@ -190,7 +206,6 @@ export const createLpd = createServerFn({ method: "POST" })
 const UpdateStatusSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(["Belum", "Sudah", "Batal"]),
-  hasil_kegiatan: z.string().optional(),
 });
 
 export const updateLpdStatus = createServerFn({ method: "POST" })
@@ -202,7 +217,6 @@ export const updateLpdStatus = createServerFn({ method: "POST" })
       .update({
         status_lpd: data.status,
         updated_at: new Date().toISOString(),
-        ...(data.hasil_kegiatan !== undefined ? { hasil_kegiatan: data.hasil_kegiatan } : {}),
         ...(data.status === "Batal" ? { deleted_at: new Date().toISOString() } : {}),
       })
       .eq("id_lpd", data.id);
