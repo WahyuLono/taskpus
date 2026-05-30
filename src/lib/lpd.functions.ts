@@ -156,7 +156,7 @@ export const listMyTasks = createServerFn({ method: "GET" })
         `id_lpd,
          transaksi_lpd:id_lpd(
            id_lpd, no_surat, no_surat_slug, jenis_perjadin, tgl_kegiatan, tgl_selesai,
-           lama_hari, status_lpd, url_foto, hasil_kegiatan,
+           lama_hari, status_lpd, url_foto,
            master_rangka:id_rangka(nama_rangka),
            master_tempat:id_tempat(nama_tempat)
          )`,
