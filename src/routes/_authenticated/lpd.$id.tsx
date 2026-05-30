@@ -39,23 +39,18 @@ const EMPTY_LAPORAN: LaporanForm = {
   tindak_lanjut: "",
 };
 
-function parseLaporan(raw: string | null | undefined): {
-  parsed: LaporanForm | null;
-  rawText: string;
-} {
-  if (!raw) return { parsed: null, rawText: "" };
-  try {
-    const obj = JSON.parse(raw);
-    if (obj && typeof obj === "object" && "alat" in obj) {
-      return {
-        parsed: { ...EMPTY_LAPORAN, ...obj },
-        rawText: raw,
-      };
-    }
-  } catch {
-    /* fallthrough */
-  }
-  return { parsed: null, rawText: raw };
+function readLaporan(lpd: any): LaporanForm | null {
+  const out: LaporanForm = {
+    alat: lpd.input_alat ?? "",
+    metode: lpd.input_metode ?? "",
+    lama_kegiatan: lpd.input_lama_kegiatan ?? "",
+    sasaran: lpd.proses_sasaran ?? "",
+    hambatan: lpd.proses_hambatan ?? "",
+    output: lpd.output ?? "",
+    tindak_lanjut: lpd.tindak_lanjut ?? "",
+  };
+  const anyFilled = (Object.values(out) as string[]).some((v) => v.trim().length > 0);
+  return anyFilled ? out : null;
 }
 
 function LpdDetailPage() {
