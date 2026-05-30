@@ -13,7 +13,7 @@ export const Route = createFileRoute("/print/lpd/$id")({
 function PrintSptPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getLpdDetail);
-  const { data: me, isFetching: meLoading } = useCurrentUser();
+  const { data: me, isFetching: meLoading, ready, userId } = useCurrentUser();
   const isAdmin = me?.role_user === "Admin";
   const q = useQuery({
     queryKey: ["lpd-detail", id],
@@ -28,7 +28,7 @@ function PrintSptPage() {
     }
   }, [q.data, isAdmin]);
 
-  if (meLoading)
+  if (!ready || (userId && !me) || meLoading)
     return <p className="p-10 text-center text-gray-500">Memuat…</p>;
   if (!isAdmin)
     return (
