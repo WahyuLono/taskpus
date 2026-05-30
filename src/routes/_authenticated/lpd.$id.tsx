@@ -22,6 +22,8 @@ const MAX_FOTO_MB = 5;
 function LpdDetailPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getLpdDetail);
+  const { data: me } = useCurrentUser();
+  const isAdmin = me?.role_user === "Admin";
   const q = useQuery({
     queryKey: ["lpd-detail", id],
     queryFn: () => fetchDetail({ data: { id } }),
@@ -74,15 +76,17 @@ function LpdDetailPage() {
             </span>
           </div>
         </div>
-        <a
-          href={`/print/lpd/${id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
-        >
-          <span className="material-symbols-outlined !text-[20px]">print</span>
-          Cetak Surat Tugas (SPT)
-        </a>
+        {isAdmin && (
+          <a
+            href={`/print/lpd/${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
+          >
+            <span className="material-symbols-outlined !text-[20px]">print</span>
+            Cetak Surat Tugas (ST)
+          </a>
+        )}
       </div>
 
       {/* Info Perjalanan */}

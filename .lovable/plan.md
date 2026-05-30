@@ -1,18 +1,15 @@
-Apply four targeted, non-structural adjustments to `src/routes/print.lpd.$id.tsx` for A4 print fit and text correctness. No layout elements will be moved or restructured.
+## Perubahan di `src/routes/_authenticated/lpd.$id.tsx`
 
-1. Fix "Pada Tanggal" wrapping
-   - In the date table's `<tbody>`, add `whiteSpace: "nowrap"` to the first `<td>` of both rows (Dikeluarkan and Pada Tanggal).
+1. **Ubah label tombol cetak** (baris 84)
+   - Dari: `Cetak Surat Tugas (SPT)`
+   - Menjadi: `Cetak Surat Tugas (ST)`
 
-2. CSS compression for A4 fit
-   - In the `<style>` block:
-     - Change `@page { size: A4; margin: 2cm 2cm 2cm 2.5cm; }` to `margin: 1.4cm 2cm 1.4cm 2.5cm;`
-     - In `.spt-page`, change `font-size: 12pt;` to `font-size: 11pt;`
-     - In `.spt-page`, change `line-height: 1.4;` to `line-height: 1.25;`
-     - Keep `.spt-page h1` at `font-size: 13pt;`
+2. **Batasi akses tombol cetak hanya untuk Admin**
+   - Gunakan hook `useCurrentUser` (sudah di-import di file ini).
+   - Ambil `data: me` dan cek `me?.role_user === "Admin"`.
+   - Render elemen `<a href="/print/lpd/...">` hanya jika user adalah Admin. Untuk role Petugas, tombol tidak ditampilkan sama sekali.
 
-3. Reduce spacer heights
-   - In the `<header>` section, change `marginBottom: 18` to `marginBottom: 12`.
-   - In the signature area at the bottom, change both handwriting-gap spacer `<div>` heights from `100` and `75` to `60`.
+3. **Proteksi route cetak (`/print/lpd/$id`)**
+   - Tambahkan guard pada `src/routes/print.lpd.$id.tsx` agar jika user non-Admin membuka URL langsung, halaman menampilkan pesan "Akses ditolak — hanya Admin yang dapat mencetak Surat Tugas" alih-alih merender surat. Ini mencegah Petugas bypass via URL.
 
-4. Fix header text
-   - In the `<header>` section, change the `<p>` text from `PUSKESMAS KUMAI` to `UPTD PUSKESMAS KUMAI` (fontSize remains 16pt).
+Tidak ada perubahan pada layout, data fetching, atau text lain (mis. paragraf "Surat Perintah Tugas (SPT)" di template surat tetap, karena user hanya meminta perubahan pada tombol cetak).
