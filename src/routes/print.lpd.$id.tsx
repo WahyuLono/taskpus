@@ -44,15 +44,15 @@ function PrintSptPage() {
   return (
     <>
       <style>{`
-        @page { size: A4; margin: 2cm 2cm 2cm 2.5cm; }
+        @page { size: A4; margin: 1.4cm 2cm 1.4cm 2.5cm; }
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
         }
         .spt-page {
           font-family: Arial, sans-serif;
-          font-size: 12pt;
-          line-height: 1.4;
+          font-size: 11pt;
+          line-height: 1.25;
           color: #000;
           background: white;
           max-width: 21cm;
