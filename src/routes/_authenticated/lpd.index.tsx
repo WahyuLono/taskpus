@@ -35,6 +35,7 @@ function LpdListPage() {
           search: search || undefined,
         },
       }),
+    enabled: !!me,
   });
 
   return (
