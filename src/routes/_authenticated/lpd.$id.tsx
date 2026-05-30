@@ -22,6 +22,8 @@ const MAX_FOTO_MB = 5;
 function LpdDetailPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getLpdDetail);
+  const { data: me } = useCurrentUser();
+  const isAdmin = me?.role_user === "Admin";
   const q = useQuery({
     queryKey: ["lpd-detail", id],
     queryFn: () => fetchDetail({ data: { id } }),
