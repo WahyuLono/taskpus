@@ -95,7 +95,7 @@ function PrintSptPage() {
         >
           {/* TODO: paste logo URL here */}
           <img
-            src="https://placehold.co/75x75.png?text=LOGO+1"
+            src="/logo-1.jpg"
             alt="Logo Pemkab"
             style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
           />
@@ -118,7 +118,7 @@ function PrintSptPage() {
           </div>
           {/* TODO: paste logo URL here */}
           <img
-            src="https://placehold.co/75x75.png?text=LOGO+2"
+            src="/logo-2.jpg"
             alt="Logo Puskesmas"
             style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
           />
