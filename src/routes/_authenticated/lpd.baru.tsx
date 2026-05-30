@@ -35,10 +35,11 @@ function BuatSPTPage() {
   const submitRangka = useServerFn(addRangka);
   const submitTempat = useServerFn(addTempat);
 
-  const rangka = useQuery({ queryKey: ["rangka"], queryFn: () => fetchRangka() });
-  const tempat = useQuery({ queryKey: ["tempat"], queryFn: () => fetchTempat() });
-  const kepala = useQuery({ queryKey: ["kepala"], queryFn: () => fetchKepala() });
-  const petugas = useQuery({ queryKey: ["petugas"], queryFn: () => fetchPetugas() });
+  const enabled = !!me;
+  const rangka = useQuery({ queryKey: ["rangka"], queryFn: () => fetchRangka(), enabled });
+  const tempat = useQuery({ queryKey: ["tempat"], queryFn: () => fetchTempat(), enabled });
+  const kepala = useQuery({ queryKey: ["kepala"], queryFn: () => fetchKepala(), enabled });
+  const petugas = useQuery({ queryKey: ["petugas"], queryFn: () => fetchPetugas(), enabled });
 
   const today = new Date().toISOString().slice(0, 10);
   const [tglBuat, setTglBuat] = useState(today);
