@@ -148,6 +148,39 @@ export type Database = {
           },
         ]
       }
+      nomor_surat_allocation: {
+        Row: {
+          created_at: string
+          id_allocation: number
+          last_used_number: number
+          range_end: number
+          range_start: number
+          status: string
+          tahun: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id_allocation?: never
+          last_used_number: number
+          range_end: number
+          range_start: number
+          status?: string
+          tahun: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id_allocation?: never
+          last_used_number?: number
+          range_end?: number
+          range_start?: number
+          status?: string
+          tahun?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       settings_config: {
         Row: {
           id_config: number
@@ -278,6 +311,15 @@ export type Database = {
         Returns: boolean
       }
       user_can_access_lpd_path: { Args: { _path: string }; Returns: boolean }
+      validate_allocation_range: {
+        Args: {
+          p_end: number
+          p_exclude_id?: number
+          p_start: number
+          p_tahun: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       role_aplikasi: "Admin" | "Petugas"
