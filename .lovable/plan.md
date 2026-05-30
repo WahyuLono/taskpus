@@ -1,92 +1,81 @@
-## Tujuan
+## Konteks
 
-Mengganti generator nomor surat saat ini (auto increment global per tahun: `max(...)+1`) menjadi mekanisme **quota allocation** sesuai PRD v9 R1. Admin mengelola jatah nomor (range) per tahun di menu Master Data baru "Setting Nomor Surat". Saat Admin membuat SPT, sistem tetap auto-pick nomor berikutnya — tapi diambil dari jatah aktif, bukan murni urut bebas.
+Saat ini di `src/routes/_authenticated/lpd.$id.tsx` (komponen `LaporanForm` & `LaporanReadonly`), Laporan Hasil Pelaksanaan Tugas hanya punya **satu** field bebas: `hasil_kegiatan` (textarea, min 150 karakter). Sesuai lampiran, ini perlu diubah menjadi **form terstruktur** dengan beberapa sub‑field. Foto dokumentasi **tidak diubah**.
 
-Scope dibatasi: HANYA penomoran surat. Tidak menyentuh modul lain (LPD form, laporan, cetak ST, role, dsb), kecuali penyesuaian RPC `create_lpd_baru` yang memang harus membaca dari tabel jatah.
+Plan ini **hanya menyentuh frontend** (`lpd.$id.tsx`). Backend (kolom tabel `transaksi_lpd`, server function `submitLaporan`, types) **belum** disentuh — masih disimpan ke `hasil_kegiatan` lama sebagai satu string JSON / gabungan teks sementara, supaya bisa Anda review tampilan dulu.
 
-## Keputusan (sesuai jawaban user)
+## Struktur Field Baru
 
-- Scope quota: **global per web app** (bukan per unit / per user).
-- Format nomor: tetap pakai komponen tahun → `090/<NNN>/P.KI.<TAHUN>` (tidak berubah). Sequence berjalan dalam tahun; reset di tahun baru.
-- Tahun berganti: otomatis tidak ada jatah aktif → wajib admin isi jatah baru.
-- Audit trail: cukup `updated_at` standar, tidak perlu log perubahan terperinci.
-- Petugas tidak terlibat (Buat SPT admin-only). Tidak perlu notifikasi ke admin.
+Sesuai lampiran, ada 4 bagian:
 
-## Perubahan Database (migration)
+**A. Input**
 
-Tabel baru `nomor_surat_allocation`:
+1. Pelaksana Kegiatan — auto, jumlah petugas (angka) + " Orang", **read‑only / locked**
+2. Sumber Dana — hard‑coded **"BOK"**, **read‑only / locked**
+3. Alat yang Digunakan — input petugas (textarea pendek)
+4. Metode — input petugas (textarea pendek)
+5. Lama Kegiatan — input petugas (textarea pendek)
 
-```text
-id_allocation     SMALLINT  PK identity
-tahun             SMALLINT  NOT NULL
-range_start       SMALLINT  NOT NULL
-range_end         SMALLINT  NOT NULL
-last_used_number  SMALLINT  NOT NULL DEFAULT (range_start - 1)
-status            TEXT      NOT NULL DEFAULT 'Active'  CHECK IN ('Active','Inactive')
-created_at, updated_at
-UNIQUE(tahun, range_start)
-CHECK (range_end >= range_start)
-CHECK (last_used_number BETWEEN range_start - 1 AND range_end)
-```
+**B. Proses**
 
-GRANT + RLS:
-- `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated; GRANT ALL TO service_role;`
-- RLS enable. Policy: Admin full access (`has_role(auth.uid(),'Admin')`); Petugas SELECT saja (opsional, agar bisa dilihat). Tidak ada akses anon.
+1. Sasaran — input petugas (textarea pendek)
+2. Jadwal — auto dari `tgl_kegiatan` (format tanggal Indonesia), **read‑only / locked**
+3. Tempat Pelaksanaan — auto dari `master_tempat.nama_tempat`, **read‑only / locked**
+4. Hambatan — input petugas (textarea pendek)
 
-Fungsi `validate_allocation_range(p_tahun, p_start, p_end, p_exclude_id)` SECURITY DEFINER untuk cek overlap range antar jatah aktif pada tahun yang sama.
+**C. Output** — input petugas (textarea)
 
-Ubah RPC `create_lpd_baru` (admin-only sudah). Ganti blok penomoran:
+**D. Tindak Lanjut** — input petugas (textarea)
 
-```text
-1. Ambil 1 baris allocation aktif di tahun(p_tgl_buat) dengan FOR UPDATE,
-   urut by range_start, yang masih punya sisa (last_used_number < range_end).
-2. Jika tidak ada → RAISE 'Jatah nomor surat tahun % sudah habis. Hubungi administrator.'
-3. v_nomor := last_used_number + 1 (atau range_start jika last_used_number < range_start)
-4. UPDATE allocation SET last_used_number = v_nomor
-5. Format no_surat / slug seperti sekarang.
-```
+Field yang bisa diedit petugas: `alat`, `metode`, `lama_kegiatan`, `sasaran`, `hambatan`, `output`, `tindak_lanjut` (7 field).
 
-Hapus dependensi `max(no_surat)` lama. Lock pakai `SELECT ... FOR UPDATE` pada baris allocation (cukup; advisory lock tidak diperlukan lagi).
+## Perubahan Frontend
 
-Migration juga menyisipkan jatah awal untuk tahun berjalan berdasarkan data existing: `range_start=1, range_end=100, last_used_number = max(nomor saat ini di transaksi_lpd tahun ini, default 0)` agar tidak terjadi tabrakan dengan surat yang sudah ada.
+### 1. `LaporanForm` (state & UI)
 
-## Perubahan Server Functions
+- Hapus single state `hasil` (textarea besar + counter 150).
+- Ganti dengan satu object state:
+  ```ts
+  const [form, setForm] = useState({
+    alat: "", metode: "", lama_kegiatan: "",
+    sasaran: "", hambatan: "",
+    output: "", tindak_lanjut: "",
+  });
+  ```
+- Render 3 grup section bertingkat: **A. Input**, **B. Proses**, **C. Output**, **D. Tindak Lanjut** dengan heading + list bernomor sesuai lampiran.
+- Field auto/locked ditampilkan sebagai baris read-only bergaya `bg-surface-container-low` + ikon `lock`, **tidak** ikut state.
+  - Pelaksana Kegiatan = `${petugas.length} Orang` (perlu pass `petugas` dari parent ke `LaporanSection` → `LaporanForm`).
+  - Sumber Dana = "BOK".
+  - Jadwal = `formatDateRange(lpd.tgl_kegiatan, lpd.tgl_selesai)` (atau `formatDate(lpd.tgl_kegiatan)` saja — konfirmasi di bawah).
+  - Tempat Pelaksanaan = `lpd.master_tempat?.nama_tempat`.
+- Validasi `canSubmit`: ke‑7 field editable harus terisi (trim length ≥ 1) **dan** `file` terpilih. (Konfirmasi di bawah soal min‑karakter.)
+- Tombol "Simpan & Tandai Selesai" tetap; teks deskripsi diubah jadi "Lengkapi seluruh isian laporan dan unggah satu foto dokumentasi…".
 
-File baru `src/lib/allocation.functions.ts` (admin-only via `has_role` check di handler, semua pakai `requireSupabaseAuth`):
+### 2. Penyimpanan sementara (tanpa migrasi)
 
-- `listAllocations({ tahun? })` — list semua jatah, urut tahun desc + range_start.
-- `createAllocation({ tahun, range_start, range_end })` — panggil `validate_allocation_range`, lalu insert (`last_used_number = range_start - 1`, status 'Active').
-- `updateAllocation({ id, range_start, range_end, status })` — boleh edit jika `last_used_number` masih ≤ `range_end` baru dan ≥ `range_start - 1` baru; cek overlap.
-- `deleteAllocation({ id })` — hanya jika `last_used_number < range_start` (belum dipakai).
+Karena backend belum diubah, dalam `mut.mutationFn` kita gabungkan 7 field + 2 auto + 2 hardcode menjadi satu string terstruktur (format `Label: value` per baris atau JSON `JSON.stringify(form)`) dan kirim sebagai `hasil_kegiatan` lama. Ini hanya **placeholder** supaya simpan tetap jalan dan kelihatan di mode readonly. Setelah Anda approve UI, plan terpisah akan migrasikan skema DB & server fn ke kolom per field.
 
-Tidak ada perubahan signature `createLpd` di FE — error dari RPC ("Jatah habis…") akan langsung ditampilkan toast oleh form yang sudah ada.
+### 3. `LaporanReadonly`
 
-## Perubahan UI (Master Data)
+- Render bagian baca-saja dengan struktur yang sama (A/B/C/D). Sementara nilai dipecah kembali dari string `lpd.hasil_kegiatan` (best‑effort parse JSON, fallback tampilkan apa adanya untuk LPD lama).
+- Foto dokumentasi tetap.
 
-Tambah satu entri di `src/routes/_authenticated/master.index.tsx`:
-- `to: "/master/nomor-surat"`, judul "Setting Nomor Surat", icon `confirmation_number`, deskripsi "Atur jatah & range nomor surat per tahun".
+### 4. Halaman lain
 
-Route baru `src/routes/_authenticated/master.nomor-surat.tsx` (admin-only via `useRequireAdmin`):
-- Filter tahun (default tahun berjalan, opsi semua).
-- Tabel kolom: Tahun, Range (start–end), Terpakai (`last_used_number - range_start + 1` / `range_end - range_start + 1`), Sisa, Status, Aksi.
-- Tombol "Tambah Jatah" → modal: tahun, range_start, range_end. Validasi: start ≥ 1, end ≥ start, anti-overlap (mengandalkan error RPC).
-- Aksi per baris: Edit (modal sama), Nonaktifkan/Aktifkan, Hapus (disable kalau sudah dipakai).
-- Banner peringatan jika untuk tahun berjalan tidak ada jatah aktif atau total sisa = 0: "Belum ada jatah nomor surat aktif untuk tahun XXXX. Tambahkan jatah agar Admin dapat membuat ST."
+- `print.lpd.$id.tsx` saat ini tidak memakai `hasil_kegiatan` → tidak perlu diubah di plan ini.
+- `lpd.index.tsx`, dashboard, dll. tidak menampilkan isi laporan → tidak terdampak.
 
-Pesan error dari RPC (jatah habis) dibiarkan muncul apa adanya di form Buat LPD.
+## Skup yang TIDAK Termasuk (akan diplan terpisah)
 
-## File yang Disentuh
+- Perubahan tabel `transaksi_lpd` (drop `hasil_kegiatan`, tambah 7 kolom baru).
+- Perubahan `submitLaporan` server function & `getLpdDetail` mapper.
+- Update `src/integrations/supabase/types.ts`.
+- Tampilan di halaman cetak (kalau nanti ingin ditampilkan).
 
-- Migration baru: tabel + index + RLS + grants + `validate_allocation_range` + revisi `create_lpd_baru` + seed jatah tahun berjalan.
-- `src/lib/allocation.functions.ts` (baru).
-- `src/routes/_authenticated/master.nomor-surat.tsx` (baru).
-- `src/routes/_authenticated/master.index.tsx` (tambah 1 item grid).
+## Pertanyaan Konfirmasi
 
-Tidak ada perubahan pada: form Buat LPD, halaman LPD detail, cetak ST, laporan, role/auth, RLS tabel `transaksi_lpd`.
+1. **Min/max karakter per field editable**: tetap minimal? Saya usulkan **tanpa min 150** lagi — cukup wajib isi (≥ 1 karakter) per field, max ~500/field. OK? OK
+2. **Jadwal locked**: tampilkan satu tanggal (`tgl_kegiatan`) atau range `tgl_kegiatan → tgl_selesai`? tgl_kegiatan saja
+3. **Pelaksana Kegiatan locked**: tampilkan "3 Orang" saja, atau "3 Orang (Nama A, Nama B, Nama C)"? tidak perlu nama orangnya.
 
-## Out of Scope
-
-- Audit log perubahan jatah.
-- Notifikasi otomatis ke admin saat jatah hampir habis (bisa dipertimbangkan nanti).
-- Ekspor/impor jatah.
-- Perubahan format nomor surat atau template surat.
+Silakan jawab — atau saya pakai default (min 1 char, range tanggal, hanya angka + "Orang") kalau Anda langsung approve.
