@@ -107,7 +107,7 @@ function PrintSptPage() {
               DINAS KESEHATAN
             </p>
             <p style={{ margin: 0, fontWeight: "bold", fontSize: "16pt" }}>
-              PUSKESMAS KUMAI
+              UPTD PUSKESMAS KUMAI
             </p>
             <p style={{ margin: "4px 0 0", fontSize: "10pt" }}>
               Jl. Pemuda RT 03, Kel. Kumai Hilir, Kec. Kumai 74181
