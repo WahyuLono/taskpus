@@ -534,23 +534,20 @@ function LaporanFormView({
         .upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
 
-      // TEMP: serialize structured form to existing `hasil_kegiatan` column.
-      // Backend migration to per-column fields is in a separate plan.
-      const payload = JSON.stringify({
-        alat: form.alat.trim(),
-        metode: form.metode.trim(),
-        lama_kegiatan: form.lama_kegiatan.trim(),
-        sasaran: form.sasaran.trim(),
-        hambatan: form.hambatan.trim(),
-        output: form.output.trim(),
-        tindak_lanjut: form.tindak_lanjut.trim(),
-      });
-
+      // Submit structured laporan per-field
       await submit({
         data: {
           id,
-          hasil_kegiatan: payload,
           url_foto: path,
+          laporan: {
+            alat: form.alat.trim(),
+            metode: form.metode.trim(),
+            lama_kegiatan: form.lama_kegiatan.trim(),
+            sasaran: form.sasaran.trim(),
+            hambatan: form.hambatan.trim(),
+            output: form.output.trim(),
+            tindak_lanjut: form.tindak_lanjut.trim(),
+          },
         },
       });
     },
