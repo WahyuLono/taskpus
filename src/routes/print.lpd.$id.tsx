@@ -87,7 +87,7 @@ function PrintSptPage() {
           style={{
             borderBottom: "3px double #000",
             paddingBottom: 6,
-            marginBottom: 18,
+            marginBottom: 12,
             display: "flex",
             alignItems: "center",
             gap: 12,
