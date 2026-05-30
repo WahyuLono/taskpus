@@ -270,7 +270,7 @@ function PrintSptPage() {
           {/* COLUMN RIGHT: Kepala UPTD */}
           <div style={{ width: 300, textAlign: "center" }}>
             <div>Kepala UPTD Puskesmas Kumai</div>
-            <div style={{ height: 80 }} />
+            <div style={{ height: 60 }} />
             <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
               {lpd.kepala?.nama ?? "—"}
             </div>
