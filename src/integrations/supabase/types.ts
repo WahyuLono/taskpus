@@ -328,6 +328,14 @@ export type Database = {
         Args: { _id_lpd: string; _user_id: string }
         Returns: boolean
       }
+      is_kepala_of_requester_lpd: {
+        Args: { _requester: string; _target_user: string }
+        Returns: boolean
+      }
+      shares_lpd_assignment: {
+        Args: { _requester: string; _target_user: string }
+        Returns: boolean
+      }
       user_can_access_lpd_path: { Args: { _path: string }; Returns: boolean }
       validate_allocation_range: {
         Args: {
