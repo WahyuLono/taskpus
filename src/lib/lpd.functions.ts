@@ -206,7 +206,6 @@ export const createLpd = createServerFn({ method: "POST" })
 const UpdateStatusSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(["Belum", "Sudah", "Batal"]),
-  hasil_kegiatan: z.string().optional(),
 });
 
 export const updateLpdStatus = createServerFn({ method: "POST" })
@@ -218,7 +217,6 @@ export const updateLpdStatus = createServerFn({ method: "POST" })
       .update({
         status_lpd: data.status,
         updated_at: new Date().toISOString(),
-        ...(data.hasil_kegiatan !== undefined ? { hasil_kegiatan: data.hasil_kegiatan } : {}),
         ...(data.status === "Batal" ? { deleted_at: new Date().toISOString() } : {}),
       })
       .eq("id_lpd", data.id);
