@@ -1,81 +1,89 @@
 ## Konteks
 
-Saat ini di `src/routes/_authenticated/lpd.$id.tsx` (komponen `LaporanForm` & `LaporanReadonly`), Laporan Hasil Pelaksanaan Tugas hanya punya **satu** field bebas: `hasil_kegiatan` (textarea, min 150 karakter). Sesuai lampiran, ini perlu diubah menjadi **form terstruktur** dengan beberapa sub‑field. Foto dokumentasi **tidak diubah**.
+Frontend `LaporanForm` & `LaporanReadonly` di `src/routes/_authenticated/lpd.$id.tsx` sudah pakai 7 field terstruktur, tapi masih di-serialize ke kolom lama `hasil_kegiatan` (JSON string). Backend perlu disesuaikan supaya 7 field disimpan di kolomnya masing-masing.
 
-Plan ini **hanya menyentuh frontend** (`lpd.$id.tsx`). Backend (kolom tabel `transaksi_lpd`, server function `submitLaporan`, types) **belum** disentuh — masih disimpan ke `hasil_kegiatan` lama sebagai satu string JSON / gabungan teks sementara, supaya bisa Anda review tampilan dulu.
+Strategi data lama: **Opsi B** — 1 LPD testing yang berstatus `Selesai` di-reset ke `Belum`, `url_foto` di-NULL-kan, file di bucket `laporan_lpd` dihapus, baru kolom `hasil_kegiatan` di-drop.
 
-## Struktur Field Baru
+## 1. Migrasi DB (`transaksi_lpd` + storage)
 
-Sesuai lampiran, ada 4 bagian:
+Satu migrasi, urutan strict:
 
-**A. Input**
+```sql
+-- a. Tambah 7 kolom baru (nullable; required-check tetap di server fn)
+ALTER TABLE public.transaksi_lpd
+  ADD COLUMN input_alat            text,
+  ADD COLUMN input_metode          text,
+  ADD COLUMN input_lama_kegiatan   text,
+  ADD COLUMN proses_sasaran        text,
+  ADD COLUMN proses_hambatan       text,
+  ADD COLUMN output                text,
+  ADD COLUMN tindak_lanjut         text;
 
-1. Pelaksana Kegiatan — auto, jumlah petugas (angka) + " Orang", **read‑only / locked**
-2. Sumber Dana — hard‑coded **"BOK"**, **read‑only / locked**
-3. Alat yang Digunakan — input petugas (textarea pendek)
-4. Metode — input petugas (textarea pendek)
-5. Lama Kegiatan — input petugas (textarea pendek)
+-- b. Reset LPD lama yang sudah Selesai pakai hasil_kegiatan (Opsi B)
+--    - status balik ke 'Belum'
+--    - url_foto di-NULL
+UPDATE public.transaksi_lpd
+   SET status_lpd = 'Belum'::public.status_surat,
+       url_foto   = NULL
+ WHERE hasil_kegiatan IS NOT NULL;
 
-**B. Proses**
+-- c. Hapus file foto LPD tsb di bucket laporan_lpd
+DELETE FROM storage.objects
+ WHERE bucket_id = 'laporan_lpd';
+-- (bucket privat, dipakai hanya untuk foto LPD; sekarang belum ada
+--  data produksi yang dipertahankan, jadi aman menghapus semua object)
 
-1. Sasaran — input petugas (textarea pendek)
-2. Jadwal — auto dari `tgl_kegiatan` (format tanggal Indonesia), **read‑only / locked**
-3. Tempat Pelaksanaan — auto dari `master_tempat.nama_tempat`, **read‑only / locked**
-4. Hambatan — input petugas (textarea pendek)
+-- d. Drop kolom lama
+ALTER TABLE public.transaksi_lpd DROP COLUMN hasil_kegiatan;
+```
 
-**C. Output** — input petugas (textarea)
+Tidak perlu GRANT baru (kolom tambahan di tabel yang sudah ada).
 
-**D. Tindak Lanjut** — input petugas (textarea)
+## 2. Server function `src/lib/lpd.functions.ts`
 
-Field yang bisa diedit petugas: `alat`, `metode`, `lama_kegiatan`, `sasaran`, `hambatan`, `output`, `tindak_lanjut` (7 field).
+`submitLaporan`:
 
-## Perubahan Frontend
-
-### 1. `LaporanForm` (state & UI)
-
-- Hapus single state `hasil` (textarea besar + counter 150).
-- Ganti dengan satu object state:
+- **inputValidator (Zod)** ganti dari `{ hasil_kegiatan: string, ... }` jadi:
   ```ts
-  const [form, setForm] = useState({
-    alat: "", metode: "", lama_kegiatan: "",
-    sasaran: "", hambatan: "",
-    output: "", tindak_lanjut: "",
-  });
+  z.object({
+    id_lpd: z.string().uuid(),
+    foto_path: z.string().min(1),
+    laporan: z.object({
+      alat:           z.string().trim().min(1).max(500),
+      metode:         z.string().trim().min(1).max(500),
+      lama_kegiatan:  z.string().trim().min(1).max(500),
+      sasaran:        z.string().trim().min(1).max(500),
+      hambatan:       z.string().trim().min(1).max(500),
+      output:         z.string().trim().min(1).max(500),
+      tindak_lanjut:  z.string().trim().min(1).max(500),
+    }),
+  })
   ```
-- Render 3 grup section bertingkat: **A. Input**, **B. Proses**, **C. Output**, **D. Tindak Lanjut** dengan heading + list bernomor sesuai lampiran.
-- Field auto/locked ditampilkan sebagai baris read-only bergaya `bg-surface-container-low` + ikon `lock`, **tidak** ikut state.
-  - Pelaksana Kegiatan = `${petugas.length} Orang` (perlu pass `petugas` dari parent ke `LaporanSection` → `LaporanForm`).
-  - Sumber Dana = "BOK".
-  - Jadwal = `formatDateRange(lpd.tgl_kegiatan, lpd.tgl_selesai)` (atau `formatDate(lpd.tgl_kegiatan)` saja — konfirmasi di bawah).
-  - Tempat Pelaksanaan = `lpd.master_tempat?.nama_tempat`.
-- Validasi `canSubmit`: ke‑7 field editable harus terisi (trim length ≥ 1) **dan** `file` terpilih. (Konfirmasi di bawah soal min‑karakter.)
-- Tombol "Simpan & Tandai Selesai" tetap; teks deskripsi diubah jadi "Lengkapi seluruh isian laporan dan unggah satu foto dokumentasi…".
+- **handler** update `transaksi_lpd` dengan 7 kolom baru + `url_foto` + `status_lpd = 'Selesai'`.
 
-### 2. Penyimpanan sementara (tanpa migrasi)
+`getLpdDetail` mapper:
 
-Karena backend belum diubah, dalam `mut.mutationFn` kita gabungkan 7 field + 2 auto + 2 hardcode menjadi satu string terstruktur (format `Label: value` per baris atau JSON `JSON.stringify(form)`) dan kirim sebagai `hasil_kegiatan` lama. Ini hanya **placeholder** supaya simpan tetap jalan dan kelihatan di mode readonly. Setelah Anda approve UI, plan terpisah akan migrasikan skema DB & server fn ke kolom per field.
+- Hapus `hasil_kegiatan` dari select & return shape.
+- Tambah 7 kolom baru ke return shape (`laporan: { alat, metode, ... } | null`; `null` kalau semua kosong, jadi readonly bisa tahu "belum ada laporan").
 
-### 3. `LaporanReadonly`
+## 3. Types
 
-- Render bagian baca-saja dengan struktur yang sama (A/B/C/D). Sementara nilai dipecah kembali dari string `lpd.hasil_kegiatan` (best‑effort parse JSON, fallback tampilkan apa adanya untuk LPD lama).
-- Foto dokumentasi tetap.
+Setelah migrasi disetujui & dijalankan, `src/integrations/supabase/types.ts` otomatis regen oleh sistem. Tidak diedit manual.
 
-### 4. Halaman lain
+## 4. Frontend `src/routes/_authenticated/lpd.$id.tsx`
 
-- `print.lpd.$id.tsx` saat ini tidak memakai `hasil_kegiatan` → tidak perlu diubah di plan ini.
-- `lpd.index.tsx`, dashboard, dll. tidak menampilkan isi laporan → tidak terdampak.
+- Hapus helper `parseLaporan` + `EMPTY_LAPORAN` (sudah tidak perlu parse JSON).
+- `LaporanReadonly`: terima `laporan` object langsung dari `lpd.laporan` (null → tampilkan empty state "Laporan belum diisi" yang sudah ada).
+- `LaporanFormView` `mut.mutationFn`: kirim `{ id_lpd, foto_path, laporan: form }` — tanpa `JSON.stringify`.
+- Tipe `LpdDetail` di-narrow: ganti `hasil_kegiatan: string | null` jadi `laporan: { ... } | null`.
 
-## Skup yang TIDAK Termasuk (akan diplan terpisah)
+## Skup yang TIDAK termasuk
 
-- Perubahan tabel `transaksi_lpd` (drop `hasil_kegiatan`, tambah 7 kolom baru).
-- Perubahan `submitLaporan` server function & `getLpdDetail` mapper.
-- Update `src/integrations/supabase/types.ts`.
-- Tampilan di halaman cetak (kalau nanti ingin ditampilkan).
+- `print.lpd.$id.tsx` — tidak menampilkan `hasil_kegiatan`, jadi tetap.
+- Dashboard / list LPD — tidak menampilkan isi laporan.
+- Tidak ada DB constraint NOT NULL di 7 kolom baru (server fn yang menjamin wajib isi saat submit; sebelum submit kolom memang harus null).
 
-## Pertanyaan Konfirmasi
+## Risiko & catatan
 
-1. **Min/max karakter per field editable**: tetap minimal? Saya usulkan **tanpa min 150** lagi — cukup wajib isi (≥ 1 karakter) per field, max ~500/field. OK? OK
-2. **Jadwal locked**: tampilkan satu tanggal (`tgl_kegiatan`) atau range `tgl_kegiatan → tgl_selesai`? tgl_kegiatan saja
-3. **Pelaksana Kegiatan locked**: tampilkan "3 Orang" saja, atau "3 Orang (Nama A, Nama B, Nama C)"? tidak perlu nama orangnya.
-
-Silakan jawab — atau saya pakai default (min 1 char, range tanggal, hanya angka + "Orang") kalau Anda langsung approve.
+- LPD testing akan kelihatan sebagai "Belum" di list — petugas perlu tahu untuk isi ulang via form baru. Saya akan mention ini di chat setelah migrasi jalan.
+- `DELETE FROM storage.objects WHERE bucket_id = 'laporan_lpd'` menghapus semua file di bucket; saat ini cuma berisi foto LPD testing, jadi aman. Kalau Anda ragu, bisa diganti jadi filter spesifik berdasarkan path LPD tsb — beri tahu saya kalau mau di-narrow.
