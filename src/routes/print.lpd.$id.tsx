@@ -36,6 +36,11 @@ function PrintSptPage() {
 
   const { lpd, petugas } = q.data as { lpd: any; petugas: any[] };
 
+  const terbilang = (angka: number): string => {
+    const huruf = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas"];
+    return angka < huruf.length ? huruf[angka] : angka.toString();
+  };
+
   return (
     <>
       <style>{`
