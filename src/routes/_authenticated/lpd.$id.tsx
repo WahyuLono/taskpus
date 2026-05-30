@@ -173,7 +173,7 @@ function LpdDetailPage() {
       </section>
 
       {/* Laporan Hasil */}
-      <LaporanSection lpd={lpd} id={id} />
+      <LaporanSection lpd={lpd} id={id} petugasCount={petugas.length} />
     </div>
   );
 }
