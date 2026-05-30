@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getLpdDetail } from "@/lib/lpd.functions";
 import { formatDate, formatNip } from "@/lib/format";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/print/lpd/$id")({
   component: PrintSptPage,
@@ -12,18 +13,29 @@ export const Route = createFileRoute("/print/lpd/$id")({
 function PrintSptPage() {
   const { id } = Route.useParams();
   const fetchDetail = useServerFn(getLpdDetail);
+  const { data: me, isFetching: meLoading } = useCurrentUser();
+  const isAdmin = me?.role_user === "Admin";
   const q = useQuery({
     queryKey: ["lpd-detail", id],
     queryFn: () => fetchDetail({ data: { id } }),
+    enabled: isAdmin,
   });
 
   useEffect(() => {
-    if (q.data) {
+    if (q.data && isAdmin) {
       const t = setTimeout(() => window.print(), 400);
       return () => clearTimeout(t);
     }
-  }, [q.data]);
+  }, [q.data, isAdmin]);
 
+  if (meLoading)
+    return <p className="p-10 text-center text-gray-500">Memuat…</p>;
+  if (!isAdmin)
+    return (
+      <p className="p-10 text-center text-red-600">
+        Akses ditolak — hanya Admin yang dapat mencetak Surat Tugas.
+      </p>
+    );
   if (q.isLoading)
     return <p className="p-10 text-center text-gray-500">Memuat surat…</p>;
   if (q.isError)
@@ -35,6 +47,7 @@ function PrintSptPage() {
   if (!q.data) return null;
 
   const { lpd, petugas } = q.data as { lpd: any; petugas: any[] };
+
 
   const terbilang = (angka: number): string => {
     const huruf = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas"];
