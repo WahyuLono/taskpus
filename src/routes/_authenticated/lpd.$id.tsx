@@ -16,8 +16,47 @@ export const Route = createFileRoute("/_authenticated/lpd/$id")({
   component: LpdDetailPage,
 });
 
-const MIN_HASIL = 150;
 const MAX_FOTO_MB = 5;
+const FIELD_MAX = 500;
+
+type LaporanForm = {
+  alat: string;
+  metode: string;
+  lama_kegiatan: string;
+  sasaran: string;
+  hambatan: string;
+  output: string;
+  tindak_lanjut: string;
+};
+
+const EMPTY_LAPORAN: LaporanForm = {
+  alat: "",
+  metode: "",
+  lama_kegiatan: "",
+  sasaran: "",
+  hambatan: "",
+  output: "",
+  tindak_lanjut: "",
+};
+
+function parseLaporan(raw: string | null | undefined): {
+  parsed: LaporanForm | null;
+  rawText: string;
+} {
+  if (!raw) return { parsed: null, rawText: "" };
+  try {
+    const obj = JSON.parse(raw);
+    if (obj && typeof obj === "object" && "alat" in obj) {
+      return {
+        parsed: { ...EMPTY_LAPORAN, ...obj },
+        rawText: raw,
+      };
+    }
+  } catch {
+    /* fallthrough */
+  }
+  return { parsed: null, rawText: raw };
+}
 
 function LpdDetailPage() {
   const { id } = Route.useParams();
