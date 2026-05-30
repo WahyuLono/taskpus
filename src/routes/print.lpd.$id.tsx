@@ -44,15 +44,15 @@ function PrintSptPage() {
   return (
     <>
       <style>{`
-        @page { size: A4; margin: 2cm 2cm 2cm 2.5cm; }
+        @page { size: A4; margin: 1.4cm 2cm 1.4cm 2.5cm; }
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
         }
         .spt-page {
           font-family: Arial, sans-serif;
-          font-size: 12pt;
-          line-height: 1.4;
+          font-size: 11pt;
+          line-height: 1.25;
           color: #000;
           background: white;
           max-width: 21cm;
@@ -87,7 +87,7 @@ function PrintSptPage() {
           style={{
             borderBottom: "3px double #000",
             paddingBottom: 6,
-            marginBottom: 18,
+            marginBottom: 12,
             display: "flex",
             alignItems: "center",
             gap: 12,
@@ -107,7 +107,7 @@ function PrintSptPage() {
               DINAS KESEHATAN
             </p>
             <p style={{ margin: 0, fontWeight: "bold", fontSize: "16pt" }}>
-              PUSKESMAS KUMAI
+              UPTD PUSKESMAS KUMAI
             </p>
             <p style={{ margin: "4px 0 0", fontSize: "10pt" }}>
               Jl. Pemuda RT 03, Kel. Kumai Hilir, Kec. Kumai 74181
@@ -246,12 +246,12 @@ function PrintSptPage() {
           <table style={{ width: 300, marginBottom: 20 }}>
             <tbody>
               <tr>
-                <td style={{ width: 100 }}>Dikeluarkan</td>
-                <td style={{ width: 10 }}>:</td>
+                <td style={{ width: 110, whiteSpace: "nowrap" }}>Dikeluarkan</td>
+                <td>:</td>
                 <td>Kumai</td>
               </tr>
               <tr>
-                <td>Pada Tanggal</td>
+                <td style={{ whiteSpace: "nowrap" }}>Pada Tanggal</td>
                 <td>:</td>
                 <td>{formatDate(lpd.tgl_buat)}</td>
               </tr>
@@ -264,13 +264,13 @@ function PrintSptPage() {
           {/* COLUMN LEFT: Mengetahui */}
           <div style={{ width: 250, textAlign: "center" }}>
             <div>Mengetahui,</div>
-            <div style={{ height: 80 }} />
+            <div style={{ height: 60 }} />
             <div>( ............................................ )</div>
           </div>
           {/* COLUMN RIGHT: Kepala UPTD */}
           <div style={{ width: 300, textAlign: "center" }}>
             <div>Kepala UPTD Puskesmas Kumai</div>
-            <div style={{ height: 80 }} />
+            <div style={{ height: 60 }} />
             <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
               {lpd.kepala?.nama ?? "—"}
             </div>
