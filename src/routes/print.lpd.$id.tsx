@@ -61,7 +61,7 @@ function PrintSptPage() {
         }
         .spt-page h1 { font-size: 13pt; font-weight: bold; text-decoration: underline; text-align: center; margin: 0; }
         .spt-page table { border-collapse: collapse; }
-        .spt-page td { vertical-align: top; padding: 2px 4px; }
+        .spt-page td { vertical-align: top; padding: 1px 4px; }
         .spt-page ol { margin: 0; padding-left: 24px; list-style-position: outside; list-style-type: decimal !important; }
         .spt-page ol li { margin-bottom: 4px; }
       `}</style>
@@ -131,7 +131,7 @@ function PrintSptPage() {
         </div>
 
         {/* Dasar */}
-        <table style={{ width: "100%", marginBottom: 12 }}>
+        <table style={{ width: "100%", marginBottom: 8 }}>
           <tbody>
             <tr>
               <td style={{ width: 80 }}>Dasar :</td>
@@ -158,10 +158,10 @@ function PrintSptPage() {
           </tbody>
         </table>
 
-        <p style={{ textAlign: "center", margin: "16px 0" }}>MEMERINTAHKAN</p>
+        <p style={{ textAlign: "center", margin: "10px 0" }}>MEMERINTAHKAN</p>
 
         {/* Kepada */}
-        <table style={{ width: "100%", marginBottom: 12 }}>
+        <table style={{ width: "100%", marginBottom: 8 }}>
           <tbody>
             <tr>
               <td style={{ width: 80 }}>Kepada :</td>
@@ -212,7 +212,7 @@ function PrintSptPage() {
         </table>
 
         {/* Untuk */}
-        <table style={{ width: "100%", marginBottom: 12 }}>
+        <table style={{ width: "100%", marginBottom: 8 }}>
           <tbody>
             <tr>
               <td style={{ width: 80 }}>Untuk :</td>
@@ -242,8 +242,8 @@ function PrintSptPage() {
         </table>
 
         {/* Footer Date (Dikeluarkan) - Placed ABOVE the signatures */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 30, pageBreakInside: "avoid" }}>
-          <table style={{ width: 300, marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10, pageBreakInside: "avoid" }}>
+          <table style={{ width: 300, marginBottom: 8 }}>
             <tbody>
               <tr>
                 <td style={{ width: 110, whiteSpace: "nowrap" }}>Dikeluarkan</td>
@@ -264,13 +264,13 @@ function PrintSptPage() {
           {/* COLUMN LEFT: Mengetahui */}
           <div style={{ width: 250, textAlign: "center" }}>
             <div>Mengetahui,</div>
-            <div style={{ height: 60 }} />
+            <div style={{ height: 80 }} />
             <div>( ............................................ )</div>
           </div>
           {/* COLUMN RIGHT: Kepala UPTD */}
           <div style={{ width: 300, textAlign: "center" }}>
             <div>Kepala UPTD Puskesmas Kumai</div>
-            <div style={{ height: 60 }} />
+            <div style={{ height: 80 }} />
             <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
               {lpd.kepala?.nama ?? "—"}
             </div>
