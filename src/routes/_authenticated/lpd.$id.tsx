@@ -401,7 +401,7 @@ function LaporanReadonly({
     };
   }, [lpd.url_foto]);
 
-  const { parsed, rawText } = parseLaporan(lpd.hasil_kegiatan);
+  const parsed = readLaporan(lpd);
   const jadwal = formatDate(lpd.tgl_kegiatan);
   const tempat = lpd.master_tempat?.nama_tempat ?? "—";
 
@@ -444,8 +444,7 @@ function LaporanReadonly({
           </div>
         </div>
       ) : (
-        // Legacy LPD (pre-restructure): show raw text as-is
-        <ReadonlyText label="Hasil Kegiatan" value={rawText || "—"} />
+        <p className="text-sm text-on-surface-variant">Laporan belum diisi.</p>
       )}
 
       {lpd.url_foto && (
