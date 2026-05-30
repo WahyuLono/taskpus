@@ -1,37 +1,32 @@
-Edit `src/routes/print.lpd.$id.tsx` only — surgical visual fixes to the print template. No business logic, no data fetching changes.
+Edit `src/routes/print.lpd.$id.tsx` only — surgical JSX/style updates to match the attached reference screenshots.
 
 ### Changes
 
-1. **Font Arial** — In the `<style>` block, change `.spt-page` font-family to `Arial, sans-serif`.
+1. **terbilang helper + dynamic duration line**
+   - Add helper inside `PrintSptPage` just before `return`:
+     ```ts
+     const terbilang = (angka: number): string => {
+       const huruf = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas"];
+       return angka < huruf.length ? huruf[angka] : angka.toString();
+     };
+     ```
+   - Replace the first `<li>` under the "Untuk" `<ol>` with:
+     `<li>Lamanya perjalanan dinas selama {lpd.lama_hari} ({terbilang(lpd.lama_hari)}) hari.</li>`
 
-2. **DASAR numbering** — Keep the existing `<ol>` with the 3 items (already vertical/numbered), but ensure label cell and list align top. Verify the `<ol>` renders `1. 2. 3.` properly aligned with `padding-left: 20px` and `list-style-position: outside`.
+2. **Force visible list numbering on `<ol>`**
+   - In the `<style>` block, change `.spt-page ol` rule to:
+     `.spt-page ol { margin: 0; padding-left: 24px; list-style-position: outside; list-style-type: decimal !important; }`
+   - Add `className="list-decimal"` to both `<ol>` elements (Dasar section and Untuk section).
 
-3. **Signature block right-aligned, inner text centered** — Replace the two-column footer `<table>` with a single right-side block: `<div style="display:flex; justify-content:flex-end; margin-top: 30px;">` containing an inner `<div style="text-align:center; min-width: 280px;">` that stacks:
-   - "Mengetahui,"
-   - "Kepala UPTD Puskesmas Kumai"
-   - 70px spacer
-   - Bold name
-   - Golongan
-   - NIP
-   
-   The "Dikeluarkan / Pada Tanggal" lines move just above this block, also right-aligned (flex justify-end) but with left-aligned inner key:value rows.
+3. **Logo placeholders visible**
+   - In `<header>`, set left `<img src="https://placehold.co/75x75.png?text=LOGO+1" />` and right `<img src="https://placehold.co/75x75.png?text=LOGO+2" />`.
+   - Keep the `{/* TODO: paste logo URL here */}` comments above each img.
 
-4. **Logos in Kop Surat** — Restructure header into a 3-column flex: `[left logo 75px] [center text block] [right logo 75px]`. Use `<img src="" alt="Logo Kiri" style="width:75px; height:75px; object-fit:contain;" />` with HTML comment `<!-- TODO: paste logo URL here -->` above each img tag.
-
-5. **Remove underlines** — Strip `textDecoration: "underline"` from these cells/elements:
-   - "Nomor : ..." paragraph (line 107)
-   - "Dasar :" td (line 116)
-   - "Kepada :" td (line 146)
-   - "Untuk :" td (line 201)
-   - "Pangkat / Golongan" td (line 171)
-   - "Jabatan" td (line 179)
-   
-   Keep underline on the `<h1>SURAT PERINTAH TUGAS</h1>` title and on the signature name (those weren't called out for removal).
-
-6. **Bold nama_rangka** — In the "Untuk" paragraph (line 206-210), wrap `{lpd.master_rangka?.nama_rangka ?? ""}` in `<strong>` (renders bold).
+4. **Signature block — two-column layout**
+   - Replace the entire `{/* Footer ttd */}` block with the exact 2-column flex layout supplied by the user: left column (width 250, centered) shows "Mengetahui," + 100px spacer + `( ............ )`; right column (width 300) shows the Dikeluarkan/Pada Tanggal table (margin-left auto) then a centered "Kepala UPTD Puskesmas Kumai" block with 75px spacer, bold+underline `lpd.kepala?.nama`, golongan, and `NIP {formatNip(lpd.kepala.nip)}`.
 
 ### Files
-- `src/routes/print.lpd.$id.tsx` (edit only)
+- `src/routes/print.lpd.$id.tsx` (edit only — JSX in return + add helper inside component + tweak one CSS rule in the embedded `<style>`).
 
 ### Verification
-After edit, open `/print/lpd/:id` for an existing LPD and confirm: Arial font everywhere, two logo placeholders flanking the kop, DASAR shows 1/2/3 stacked vertically, no underline on the listed labels, nama_rangka bold inside "Untuk" sentence, signature block sits on the right with centered inner text.
+Open `/print/lpd/:id` and confirm: Dasar and Untuk lists show "1. 2. 3." numbering, duration line renders e.g. "selama 3 (tiga) hari", both logo placeholders visible in the kop, and the footer has "Mengetahui" on the left with signature space and "Kepala UPTD Puskesmas Kumai" stack on the right under the Dikeluarkan/Pada Tanggal table.

@@ -36,6 +36,11 @@ function PrintSptPage() {
 
   const { lpd, petugas } = q.data as { lpd: any; petugas: any[] };
 
+  const terbilang = (angka: number): string => {
+    const huruf = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas", "dua belas", "tiga belas", "empat belas", "lima belas"];
+    return angka < huruf.length ? huruf[angka] : angka.toString();
+  };
+
   return (
     <>
       <style>{`
@@ -57,7 +62,7 @@ function PrintSptPage() {
         .spt-page h1 { font-size: 13pt; font-weight: bold; text-decoration: underline; text-align: center; margin: 0; }
         .spt-page table { border-collapse: collapse; }
         .spt-page td { vertical-align: top; padding: 2px 4px; }
-        .spt-page ol { margin: 0; padding-left: 20px; list-style-position: outside; }
+        .spt-page ol { margin: 0; padding-left: 24px; list-style-position: outside; list-style-type: decimal !important; }
         .spt-page ol li { margin-bottom: 4px; }
       `}</style>
 
@@ -88,9 +93,9 @@ function PrintSptPage() {
             gap: 12,
           }}
         >
-          {/* TODO: paste left logo URL (Pemkab Kotawaringin Barat) here */}
+          {/* TODO: paste logo URL here */}
           <img
-            src=""
+            src="https://placehold.co/75x75.png?text=LOGO+1"
             alt="Logo Pemkab"
             style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
           />
@@ -111,9 +116,9 @@ function PrintSptPage() {
               Telp. (0532) 61179, Pos-el: puskesmaskumai.2019@gmail.com
             </p>
           </div>
-          {/* TODO: paste right logo URL (Puskesmas Kumai) here */}
+          {/* TODO: paste logo URL here */}
           <img
-            src=""
+            src="https://placehold.co/75x75.png?text=LOGO+2"
             alt="Logo Puskesmas"
             style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
           />
@@ -131,7 +136,7 @@ function PrintSptPage() {
             <tr>
               <td style={{ width: 80 }}>Dasar :</td>
               <td>
-                <ol>
+                <ol className="list-decimal">
                   <li>
                     Keputusan Menteri Dalam Negeri Nomor 13 Tahun 2006 tentang
                     Pedoman Pengelola Keuangan Daerah.
@@ -218,10 +223,9 @@ function PrintSptPage() {
                   {lpd.master_tempat?.nama_tempat ?? ""} Pada Tanggal :{" "}
                   {formatDate(lpd.tgl_kegiatan)}
                 </p>
-                <ol>
+                <ol className="list-decimal">
                   <li>
-                    Lamanya perjalanan dinas selama ({lpd.lama_hari}) (dalam
-                    bilangan lama hari) hari.
+                    Lamanya perjalanan dinas selama {lpd.lama_hari} ({terbilang(lpd.lama_hari)}) hari.
                   </li>
                   <li>
                     Melaporkan hasil pelaksanaan tugas kepada Kepala Puskesmas.
@@ -237,13 +241,20 @@ function PrintSptPage() {
           </tbody>
         </table>
 
-        {/* Footer ttd — right aligned block, inner text centered */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 30 }}>
-          <div style={{ minWidth: 280 }}>
-            <table style={{ marginBottom: 12 }}>
+        {/* Footer ttd — Split into Left (Mengetahui) and Right (Kepala UPTD) */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 40, pageBreakInside: "avoid" }}>
+          {/* COLUMN LEFT: Mengetahui */}
+          <div style={{ width: 250, textAlign: "center" }}>
+            <div>Mengetahui,</div>
+            <div style={{ height: 100 }} />
+            <div>( ............................................ )</div>
+          </div>
+          {/* COLUMN RIGHT: Dikeluarkan & Kepala UPTD */}
+          <div style={{ width: 300 }}>
+            <table style={{ marginBottom: 12, marginLeft: "auto" }}>
               <tbody>
                 <tr>
-                  <td style={{ width: 110 }}>Dikeluarkan</td>
+                  <td style={{ width: 100 }}>Dikeluarkan</td>
                   <td>:</td>
                   <td>Kumai</td>
                 </tr>
@@ -254,10 +265,10 @@ function PrintSptPage() {
                 </tr>
               </tbody>
             </table>
-            <div style={{ textAlign: "center" }}>
-              <div>Mengetahui,</div>
+
+            <div style={{ textAlign: "center", marginTop: 16 }}>
               <div>Kepala UPTD Puskesmas Kumai</div>
-              <div style={{ height: 70 }} />
+              <div style={{ height: 75 }} />
               <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
                 {lpd.kepala?.nama ?? "—"}
               </div>
