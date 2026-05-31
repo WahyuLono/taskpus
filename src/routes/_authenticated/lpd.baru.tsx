@@ -121,9 +121,16 @@ function BuatSPTPage() {
   const valid =
     idRangka && idTempat && idKepala && petugasIds.length > 0 && jenis.trim().length >= 2;
 
-  const filteredPetugas = (petugas.data ?? []).filter((p: any) =>
-    `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`.toLowerCase().includes(petugasSearch.toLowerCase()),
-  );
+  const petugasAll = (petugas.data ?? []) as any[];
+  const selectedPetugas = petugasAll.filter((p) => petugasIds.includes(p.id_user));
+  const searchTrim = petugasSearch.trim().toLowerCase();
+  const filteredPetugas = searchTrim
+    ? petugasAll.filter(
+        (p) =>
+          !petugasIds.includes(p.id_user) &&
+          `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`.toLowerCase().includes(searchTrim),
+      )
+    : [];
 
   return (
     <form
