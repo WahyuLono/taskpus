@@ -30,6 +30,12 @@ export function formatNip(nip: string | null | undefined): string {
   return nip && nip.trim() ? nip : "-";
 }
 
+export function formatDateRangeFull(start?: string | null, end?: string | null): string {
+  if (!start) return "—";
+  const endVal = end ?? start;
+  return `${formatDate(start)} s/d ${formatDate(endVal)}`;
+}
+
 export function formatGolongan(
   id_golongan: number | null | undefined,
   golMap?: Map<number, string>,

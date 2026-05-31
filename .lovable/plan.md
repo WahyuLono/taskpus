@@ -1,20 +1,42 @@
-# Perbaiki status_lpd saat petugas simpan laporan
 
-## Masalah
-Di `src/lib/lpd.functions.ts` (fungsi `submitLaporan`, baris ~137–151), saat petugas menekan **Simpan**, kolom `status_lpd` langsung di-set ke `"Sudah"`. Akibatnya status di backend / tabel daftar LPD langsung jadi **Selesai**, padahal admin belum approve. Hal yang sama terulang ketika petugas mengirim ulang setelah ditolak.
+## Tujuan
 
-Seharusnya `status_lpd` baru berubah jadi `"Sudah"` ketika admin menekan **Setujui** — dan RPC `approve_lpd` sudah melakukan itu. Begitu pula `reject_lpd` sudah memastikan kembali ke `"Belum"` saat ditolak.
+Memperbaiki 4 hal pada halaman cetak `src/routes/print.laporan.$id.tsx` agar hasil cetak A4 rapi sesuai template.
 
 ## Perubahan
-**File:** `src/lib/lpd.functions.ts` — fungsi `submitLaporan`
 
-- Hapus baris `status_lpd: "Sudah"` dari payload `.update(...)`. Cukup update field laporan (input_alat, metode, lama_kegiatan, sasaran, hambatan, output, tindak_lanjut, url_foto, updated_at).
-- Tetap panggil RPC `submit_laporan_for_approval` setelahnya — itu yang mengubah `approval_status` jadi `"Menunggu"`.
+### 1. C. OUTPUT & D. TINDAK LANJUT sejajar + titik dua kembali
 
-## Hasil yang diharapkan
-- Petugas simpan pertama kali → `approval_status = Menunggu`, `status_lpd = Belum` → badge tetap **Menunggu**.
-- Admin tolak → tetap `Belum`, petugas bisa revisi.
-- Petugas simpan revisi → tetap `Menunggu` + `Belum`.
-- Admin setujui → `approval_status = Disetujui`, `status_lpd = Sudah` → badge berubah **Selesai**, tombol Cetak LPD muncul.
+Saat ini keduanya dirender 2 baris: judul (`lpd-group`) di baris 1, value di baris 2 dengan `no`/`label` kosong — sehingga value terlihat melayang dan titik dua hilang (kode: `{label ? ":" : ""}`).
 
-Tidak ada perubahan database / RLS / UI; murni satu baris di server function.
+Akan diubah jadi satu baris grid yang menyatu dengan kolom value lain:
+- Kolom 1+2 (gabung) berisi label tebal `C. OUTPUT` / `D. TINDAK LANJUT`
+- Kolom 3 berisi `:`
+- Kolom 4 berisi nilai (`lpd.output`, `lpd.tindak_lanjut`)
+
+Implementasi: buat komponen kecil `GroupInlineRow` yang reuse `.lpd-row` tapi dengan `grid-template-columns` yang menggabungkan dua kolom pertama (`192px 10px 1fr`) — sehingga titik dua dan value-nya tetap segaris persis dengan baris di atasnya (`2 orang`, `BOK`, dst).
+
+### 2. Tanggal Pelaksanaan — tampilkan rentang penuh & kurangi lebar label
+
+- Buat helper baru `formatDateRangeFull(start, end)` di `src/lib/format.ts` yang **selalu** mengembalikan `"<start> s/d <end>"` walau tanggalnya sama (mis. `25 Mei 2026 s/d 25 Mei 2026`). `formatDateRange` lama tetap dipertahankan untuk tempat lain.
+- Pakai helper baru di baris Tanggal Pelaksanaan.
+- Kecilkan `.lpd-table td.label` dari `160px` → `130px` agar kolom value lebih lega dan judul "Tanggal Pelaksanaan" tidak makan ruang berlebihan.
+
+### 3. Saran ukuran font untuk A4
+
+Rekomendasi saya: turunkan body dari **11pt → 10pt**, dan judul `<h1>` dari **14pt → 13pt**. Alasan:
+- 10pt adalah ukuran standar dokumen dinas Indonesia (mirip Arial 10/11 pada Word) dan masih sangat nyaman dibaca.
+- Memberi ruang lebih supaya isi tabel Hasil Kegiatan (yang panjang) tidak mepet ke pinggir A4.
+- Foto dokumentasi jadi punya ruang lebih besar tanpa memecah halaman.
+
+Line-height tetap 1.3 agar tetap legible.
+
+## File yang Diubah
+
+- `src/lib/format.ts` — tambah `formatDateRangeFull`
+- `src/routes/print.laporan.$id.tsx` — ganti render OUTPUT/TINDAK LANJUT, pakai helper baru, kecilkan font & lebar label
+
+## Tidak Diubah
+
+- Logika data, RPC, status approval — tidak disentuh
+- Halaman cetak SPPD (`print.lpd.$id.tsx`) — di luar scope koreksi ini
