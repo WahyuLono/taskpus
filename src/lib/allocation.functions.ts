@@ -46,8 +46,8 @@ export const listAllocations = createServerFn({ method: "POST" })
 
 const RangeBase = z.object({
   tahun: z.number().int().min(2000).max(2100),
-  range_start: z.number().int().min(1).max(32000),
-  range_end: z.number().int().min(1).max(32000),
+  range_start: z.number().int().min(1).max(99999),
+  range_end: z.number().int().min(1).max(99999),
 });
 
 const CreateSchema = RangeBase.refine((d) => d.range_end >= d.range_start, {
