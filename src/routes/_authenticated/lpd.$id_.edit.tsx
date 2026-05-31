@@ -98,7 +98,18 @@ function EditSPTPage() {
 
   const lpd = (detail.data as any)?.lpd;
   const approval = lpd?.approval_status as string | undefined;
-  const locked = approval === "Menunggu" || approval === "Disetujui";
+  const statusLpd = lpd?.status_lpd as string | undefined;
+  const canEdit = statusLpd === "Belum" && approval === "Draft";
+
+  const filteredPetugas = useMemo(
+    () =>
+      (petugas.data ?? []).filter((p: any) =>
+        `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`
+          .toLowerCase()
+          .includes(petugasSearch.toLowerCase()),
+      ),
+    [petugas.data, petugasSearch],
+  );
 
   const submit = useMutation({
     mutationFn: () =>
