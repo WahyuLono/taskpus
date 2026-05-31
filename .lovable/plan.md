@@ -1,68 +1,54 @@
+## Perubahan format Nomor Surat: 3 → 5 digit
 
-# Proposal Penawaran Aplikasi LPD — Puskesmas Kumai
+Format baru: `090/NNNNN/P.KI.YYYY` (slug: `090_NNNNN_P.KI.YYYY`).
 
-Membuat satu file PDF (bukan fitur web app) berisi proposal penawaran berdasarkan aplikasi LPD yang sudah dibangun bersama. Tidak ada perubahan kode pada aplikasi.
+### 1. Migrasi database (satu migration)
 
-## Output
+**a. Ubah tipe kolom alokasi (SMALLINT → INTEGER)**
+SMALLINT hanya menampung sampai 32.767, sedangkan format 5 digit harus bisa mencapai 99.999.
+```sql
+ALTER TABLE public.nomor_surat_allocation
+  ALTER COLUMN range_start TYPE INTEGER,
+  ALTER COLUMN range_end TYPE INTEGER,
+  ALTER COLUMN last_used_number TYPE INTEGER;
+```
+Plus update tanda tangan & body `validate_allocation_range` dan `create_lpd_baru` agar parameter SMALLINT diubah ke INTEGER.
 
-- File: `/mnt/documents/proposal-lpd-puskesmas-kumai.pdf`
-- Ukuran: A4, margin 2cm, font profesional (Helvetica/Times), 1 warna aksen (biru tua menyesuaikan brand puskesmas/instansi).
-- Akan ditampilkan ke user via `<presentation-artifact>` setelah dibuat.
+**b. Update fungsi `create_lpd_baru`**
+Ganti `lpad(v_nomor::text, 3, '0')` → `lpad(v_nomor::text, 5, '0')` pada `v_no_surat` dan `v_no_surat_slug`.
 
-## Struktur isi proposal
+**c. Update data eksisting `transaksi_lpd` (3 baris)**
+```sql
+UPDATE transaksi_lpd
+SET no_surat = regexp_replace(no_surat, '^090/(\d{1,4})/', '090/' || lpad((regexp_match(no_surat,'^090/(\d+)/'))[1], 5, '0') || '/'),
+    no_surat_slug = regexp_replace(no_surat_slug, '^090_(\d{1,4})_', '090_' || lpad((regexp_match(no_surat_slug,'^090_(\d+)_'))[1], 5, '0') || '_')
+WHERE no_surat ~ '^090/\d{1,4}/';
+```
+Hasil: `090/00001/P.KI.2026`, `090/00002/P.KI.2026`, `090/00003/P.KI.2026`.
 
-1. **Kop & Judul**
-   - Judul: "Proposal Pengembangan Aplikasi Laporan Pelaksanaan Dinas (LPD)"
-   - Ditujukan kepada: **Kepala UPTD Puskesmas Kumai**
-   - Tanggal: 31 Mei 2026
+**d. Update path file di storage `laporan_lpd`**
+Dua LPD punya `url_foto` dengan slug lama. Rename path di tabel `storage.objects` agar tetap konsisten dengan slug baru, lalu update kolom `url_foto`:
+```sql
+UPDATE storage.objects
+SET name = replace(name, '/090_001_', '/090_00001_')
+WHERE bucket_id = 'laporan_lpd' AND name LIKE '%/090_001_%';
+-- ulangi untuk 002 → 00002, 003 → 00003
+UPDATE transaksi_lpd
+SET url_foto = replace(url_foto, '/090_001_', '/090_00001_')
+WHERE url_foto LIKE '%/090_001_%';
+-- dst.
+```
 
-2. **Latar Belakang** (singkat)
-   - Kebutuhan digitalisasi pencatatan LPD, cetak laporan, dan manajemen data pegawai/golongan/tempat.
+### 2. Perubahan kode
 
-3. **Ringkasan Aplikasi yang Dibangun**
-   Modul utama (diambil dari struktur kode aktual):
-   - Autentikasi & manajemen user (admin/pegawai)
-   - Modul LPD: buat, edit, daftar, detail
-   - Cetak Laporan & Cetak LPD (siap A4)
-   - Master data: Golongan, Tempat, Rangka, Nomor Surat, User
-   - Dashboard & halaman Tugas
-   - Profil pengguna
+**a. `src/lib/allocation.functions.ts`** – naikkan `RangeBase` max dari `32000` menjadi `99999`.
 
-4. **Teknologi**
-   - Frontend: React 19 + TanStack Start (TypeScript, Tailwind v4)
-   - Backend: Lovable Cloud (Supabase) — Auth, Database (RLS), Server Functions
-   - Deploy: Cloudflare Workers (edge)
+**b. `src/routes/_authenticated/master.nomor-surat.tsx`** – default form `range_end: 100` tetap, tapi pastikan input number menerima sampai 99999 (validasi sudah di server).
 
-5. **Rekap Waktu Pengerjaan**
-   Tabel:
-   | Tanggal | Aktivitas | Jam |
-   |---|---|---|
-   | 16 Mei 2026 | Penyusunan PRD (Product Requirement Doc) | 10 jam |
-   | 17 Mei 2026 | Penyusunan PRD (lanjutan & finalisasi) | 6 jam |
-   | 18–31 Mei 2026 | Implementasi modul, integrasi DB, cetak laporan, QA & revisi | (disertakan sebagai "implementasi & iterasi") |
-   | **Total fase PRD** | | **16 jam** |
+**c. `src/lib/lpd.functions.ts` dan UI** – tidak ada hardcode 3 digit, jadi cukup mengandalkan output fungsi DB. Saya akan grep ulang setelah masuk build mode untuk memastikan tidak ada `lpad(... 3 ...)` di sisi TS.
 
-   Catatan: hanya jam PRD yang dirinci karena itu data pasti yang Anda berikan; fase implementasi disebut sebagai cakupan kerja tanpa angka jam spesifik.
+**d. `.lovable/plan.md`** – catat perubahan format nomor surat.
 
-6. **Penawaran Harga**
-   - Nilai investasi: **Rp 6.500.000,-** (enam juta lima ratus ribu rupiah)
-   - Sudah termasuk: pengembangan seluruh modul di atas, deployment awal, dokumentasi singkat penggunaan.
-   - Belum termasuk (opsional): pelatihan onsite, biaya domain kustom, pengembangan fitur tambahan di luar lingkup.
-
-7. **Syarat & Ketentuan Pembayaran** (umum)
-   - DP 50% di awal, pelunasan 50% setelah serah terima.
-   - Garansi bug 30 hari setelah serah terima.
-
-8. **Penutup & Tanda Tangan**
-   - Hormat saya, ……………… (diisi nama pengembang oleh user nanti — placeholder).
-
-## Implementasi teknis
-
-- Script Python (reportlab) di `/tmp/gen_proposal.py` → tulis PDF langsung ke `/mnt/documents/`.
-- QA wajib: render PDF ke gambar (`pdftoppm`) dan inspeksi setiap halaman sebelum kirim, perbaiki bila ada overflow/teks terpotong.
-
-## Yang TIDAK dilakukan
-
-- Tidak menambah halaman/route di aplikasi.
-- Tidak mengubah database, kode, atau styling app.
-- Tidak menggunakan kop/logo resmi (kecuali Anda berikan file logo nanti).
+### Catatan
+- Aplikasi mencari LPD via slug (mis. di route print). Karena baris eksisting di-update sekaligus path storage, link lama yang menggunakan slug 3 digit akan rusak — namun aplikasi merender link dari data terbaru, jadi tidak ada dampak fungsional.
+- Tidak ada perubahan UI selain peningkatan batas max input.
