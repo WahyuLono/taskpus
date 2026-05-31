@@ -19,9 +19,10 @@ function DashboardPage() {
   const stats = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats(), enabled });
   const recent = useQuery({
     queryKey: ["lpd-recent"],
-    queryFn: () => fetchList({ data: { limit: 8 } }),
+    queryFn: () => fetchList({ data: { page: 1, pageSize: 8 } }),
     enabled,
   });
+  const recentRows = recent.data?.rows ?? [];
 
   const cards = [
     { label: "Total LPD", value: stats.data?.total ?? "—", icon: "description", tint: "primary" },
