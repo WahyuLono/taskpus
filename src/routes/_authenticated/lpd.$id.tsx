@@ -508,9 +508,11 @@ function LaporanSection({
       </section>
     );
   }
-  if (lpd.status_lpd === "Sudah") {
+  // Lock the form once it's awaiting review or approved
+  if (lpd.approval_status === "Menunggu" || lpd.approval_status === "Disetujui") {
     return <LaporanReadonly lpd={lpd} petugasCount={petugasCount} />;
   }
+  // Draft (new) or Ditolak (revision) → editable form, pre-filled if data exists
   return <LaporanFormView id={id} lpd={lpd} petugasCount={petugasCount} />;
 }
 
