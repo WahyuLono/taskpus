@@ -1,17 +1,38 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { listMyTasks } from "@/lib/lpd.functions";
 import { StatusBadge } from "@/components/lpd/status-badge";
 import { formatDateRange } from "@/lib/format";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+
+const PAGE_SIZE = 12;
+
+const searchSchema = z.object({
+  page: fallback(z.number().int().min(1), 1).default(1),
+});
 
 export const Route = createFileRoute("/_authenticated/tugas")({
+  validateSearch: zodValidator(searchSchema),
   component: TugasPage,
 });
 
 function TugasPage() {
+  const { page } = Route.useSearch();
+  const navigate = useNavigate({ from: "/tugas" });
   const fetchTasks = useServerFn(listMyTasks);
-  const q = useQuery({ queryKey: ["my-tasks"], queryFn: () => fetchTasks() });
+  const q = useQuery({
+    queryKey: ["my-tasks", page],
+    queryFn: () => fetchTasks({ data: { page, pageSize: PAGE_SIZE } }),
+    placeholderData: keepPreviousData,
+  });
+
+  const rows = q.data?.rows ?? [];
+  const total = q.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const setPage = (n: number) => navigate({ search: { page: n } });
 
   return (
     <div className="space-y-5">
@@ -24,12 +45,12 @@ function TugasPage() {
 
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {q.isLoading && <p className="text-on-surface-variant">Memuat…</p>}
-        {q.data?.length === 0 && (
+        {!q.isLoading && rows.length === 0 && (
           <div className="md:col-span-2 xl:col-span-3 bg-card border border-outline-variant rounded-xl p-10 text-center text-on-surface-variant">
             Belum ada tugas yang ditugaskan kepada Anda.
           </div>
         )}
-        {q.data?.map((t: any) => (
+        {rows.map((t: any) => (
           <Link
             key={t.id_lpd}
             to="/lpd/$id"
@@ -56,6 +77,19 @@ function TugasPage() {
           </Link>
         ))}
       </div>
+
+      {total > 0 && (
+        <div className="bg-card border border-outline-variant rounded-xl shadow-card">
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={PAGE_SIZE}
+            onChange={setPage}
+            className="border-t-0"
+          />
+        </div>
+      )}
     </div>
   );
 }

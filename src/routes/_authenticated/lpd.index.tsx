@@ -1,15 +1,27 @@
-import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { listLpd } from "@/lib/lpd.functions";
 import { StatusBadge } from "@/components/lpd/status-badge";
 import { formatDateRange } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { useEffect, useState } from "react";
+
+const PAGE_SIZE = 12;
+
+const searchSchema = z.object({
+  page: fallback(z.number().int().min(1), 1).default(1),
+  status: fallback(z.enum(["all", "Belum", "Sudah", "Batal"]), "all").default("all"),
+  q: fallback(z.string(), "").default(""),
+});
 
 export const Route = createFileRoute("/_authenticated/lpd/")({
+  validateSearch: zodValidator(searchSchema),
   component: LpdListPage,
 });
 
@@ -22,21 +34,45 @@ const FILTERS = [
 
 function LpdListPage() {
   const { data: me } = useCurrentUser();
-  const [status, setStatus] = useState<(typeof FILTERS)[number]["key"]>("all");
-  const [search, setSearch] = useState("");
+  const { page, status, q: searchParam } = Route.useSearch();
+  const navigate = useNavigate({ from: "/lpd" });
   const fetchList = useServerFn(listLpd);
-  const q = useQuery({
-    queryKey: ["lpd-list", status, search],
+
+  // Debounced input untuk search agar tiap ketikan tidak refetch.
+  const [searchInput, setSearchInput] = useState(searchParam);
+  useEffect(() => setSearchInput(searchParam), [searchParam]);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (searchInput !== searchParam) {
+        navigate({ search: (p) => ({ ...p, q: searchInput, page: 1 }) });
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput, searchParam, navigate]);
+
+  const query = useQuery({
+    queryKey: ["lpd-list", status, searchParam, page],
     queryFn: () =>
       fetchList({
         data: {
-          limit: 100,
+          page,
+          pageSize: PAGE_SIZE,
           status: status === "all" ? undefined : (status as "Belum" | "Sudah" | "Batal"),
-          search: search || undefined,
+          search: searchParam || undefined,
         },
       }),
     enabled: !!me,
+    placeholderData: keepPreviousData,
   });
+
+  const rows = query.data?.rows ?? [];
+  const total = query.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const setStatus = (s: (typeof FILTERS)[number]["key"]) =>
+    navigate({ search: (p) => ({ ...p, status: s, page: 1 }) });
+  const setPage = (n: number) =>
+    navigate({ search: (p) => ({ ...p, page: n }) });
 
   return (
     <div className="space-y-5">
@@ -63,8 +99,8 @@ function LpdListPage() {
               search
             </span>
             <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Cari nomor surat…"
               className="pl-9 w-64"
             />
@@ -96,21 +132,21 @@ function LpdListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {q.isLoading && (
+              {query.isLoading && (
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center text-on-surface-variant">
                     Memuat…
                   </td>
                 </tr>
               )}
-              {q.data?.length === 0 && (
+              {!query.isLoading && rows.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center text-on-surface-variant">
                     Tidak ada data.
                   </td>
                 </tr>
               )}
-              {q.data?.map((row: any) => (
+              {rows.map((row: any) => (
                 <tr key={row.id_lpd} className="hover:bg-primary/5 transition-colors">
                   <td className="px-5 py-3 font-semibold text-primary">{row.no_surat}</td>
                   <td className="px-5 py-3">{row.master_rangka?.nama_rangka ?? "—"}</td>
@@ -136,6 +172,13 @@ function LpdListPage() {
             </tbody>
           </table>
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onChange={setPage}
+        />
       </section>
     </div>
   );
