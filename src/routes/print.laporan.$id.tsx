@@ -144,6 +144,17 @@ function PrintLaporanPage() {
           column-gap: 4px;
           padding-left: 18px;
         }
+        .lpd-row-inline {
+          display: grid;
+          grid-template-columns: 192px 10px 1fr;
+          column-gap: 4px;
+          padding-left: 18px;
+          font-weight: bold;
+          margin-top: 4px;
+        }
+        .lpd-row-inline > div:last-child {
+          font-weight: normal;
+        }
         .lpd-foto {
           max-width: 100%;
           max-height: 9cm;
