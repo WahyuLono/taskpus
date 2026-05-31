@@ -122,7 +122,7 @@ function PrintLaporanPage() {
           font-weight: bold;
         }
         .lpd-table td.label {
-          width: 160px;
+          width: 130px;
           font-weight: bold;
         }
         .lpd-sub {
