@@ -168,7 +168,7 @@ export function SimpleNameCrud(props: {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((r) => (
+              paginated.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="text-on-surface-variant">{r.id}</TableCell>
                   <TableCell className="font-medium">{r.nama}</TableCell>
@@ -197,6 +197,13 @@ export function SimpleNameCrud(props: {
             )}
           </TableBody>
         </Table>
+        <PaginationBar
+          page={safePage}
+          totalPages={totalPages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onChange={setPage}
+        />
       </div>
 
       <Dialog open={!!dialog} onOpenChange={(o) => !o && close()}>
