@@ -292,7 +292,7 @@ function BuatSPTPage() {
   );
 }
 
-function Section({
+export function Section({
   title,
   subtitle,
   children,
@@ -312,7 +312,7 @@ function Section({
   );
 }
 
-function Fld({ label, children }: { label: string; children: React.ReactNode }) {
+export function Fld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
@@ -323,7 +323,7 @@ function Fld({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+export function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-3">
       <dt className="text-on-surface-variant">{k}</dt>
@@ -332,7 +332,7 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
-function QuickSelect({
+export function QuickSelect({
   value,
   options,
   onChange,
