@@ -1,84 +1,63 @@
-# Evaluasi Pagination — Status Saat Ini
+# Edit SPT (Admin only)
 
-Saya sudah menelusuri semua halaman daftar di web app. **Belum ada satupun pagination yang terimplementasi**. Komponen `src/components/ui/pagination.tsx` (shadcn) sudah tersedia tetapi tidak dipakai di manapun.
+## Tujuan
 
-Ringkasan kondisi per halaman:
+Saat ini setelah Admin membuat SPT di `/lpd/baru`, metadata surat (tanggal, jenis, dalam rangka, tempat, kepala penandatangan, daftar petugas) tidak bisa diubah lagi — hanya bisa dilihat di halaman detail. Tambah kemampuan **Admin** untuk mengedit data SPT tersebut.
 
+Catatan penting:
 
-| Halaman                                  | Format                     | Batas saat ini                    | Pagination                               |
-| ---------------------------------------- | -------------------------- | --------------------------------- | ---------------------------------------- |
-| `/dashboard` → LPD Terbaru               | Tabel                      | `limit: 8` (hardcoded)            | Tidak — memang ringkasan saja            |
-| `/lpd` (Daftar LPD)                      | Tabel                      | `limit: 100` (hardcoded)          | Tidak — akan bermasalah saat data tumbuh |
-| `/tugas`                                 | **Card** (grid 2–3 kolom)  | Semua data ditarik                | Tidak                                    |
-| `/master/golongan`, `/rangka`, `/tempat` | Tabel via `SimpleNameCrud` | Semua ditarik, filter client-side | Tidak                                    |
-| `/master/user`                           | (perlu pagination juga)    | Semua ditarik                     | Tidak                                    |
-| `/master/nomor-surat`                    | (perlu pagination juga)    | Semua ditarik                     | Tidak                                    |
+- `**no_surat` / `no_surat_slug` TIDAK diubah** — sudah ter-allocate dari `nomor_surat_allocation`, mengubahnya akan merusak konsistensi nomor + path storage.
+- Field yang bisa diedit: `tgl_buat`, `tgl_kegiatan`, `tgl_selesai`, `jenis_perjadin`, `id_rangka`, `id_tempat`, `id_kepala`, dan daftar `petugas_ids`. `lama_hari` dihitung ulang otomatis dari rentang tanggal.
+- Field laporan hasil kegiatan (`input_alat`, `output`, `url_foto`, dll) **tidak disentuh** — itu tetap milik alur petugas/approval.
+- Akses dibatasi role **Admin** di tiga lapisan: UI (tombol tersembunyi), server function (cek `has_role`), dan RLS yang sudah ada (`Admins update lpd`).
 
+## Perubahan
 
-# Rekomendasi Saya
+### 1. Database function baru (migration)
 
-**1. Dashboard "LPD Terbaru" → JANGAN diberi pagination.**
-Ini adalah widget ringkasan. Biarkan `limit: 8` dan link "Lihat semua →" yang sudah ada — itulah pola yang benar untuk dashboard. Menambahkan pagination di sini akan mengaburkan fungsinya.
+RPC `update_lpd_spt(p_id_lpd, p_tgl_buat, p_tgl_kegiatan, p_tgl_selesai, p_jenis_perjadin, p_id_rangka, p_id_tempat, p_id_kepala, p_petugas_ids)`:
 
-**2. `/lpd` dan `/tugas` → Pagination server-side.**
-Data LPD akan terus bertambah setiap bulan/tahun. Client-side pagination (tarik semua lalu potong di browser) akan melambat. Lebih baik:
+- `SECURITY DEFINER`, cek `has_role(auth.uid(), 'Admin')` → kalau bukan admin RAISE EXCEPTION.
+- UPDATE `transaksi_lpd` field metadata + hitung ulang `lama_hari = (tgl_selesai - tgl_kegiatan) + 1` + set `updated_at = now()`.
+- Sinkronkan `detail_petugas`: DELETE semua baris untuk `id_lpd`, INSERT ulang dari array `p_petugas_ids` (cara paling sederhana & aman).
+- Tidak mengubah `no_surat`, `no_surat_slug`, status, atau field laporan.
 
-- Tambah `page` + `pageSize` ke `listLpd` dan `listMyTasks` (server function), dengan `count: 'exact'` dari Supabase agar tahu total halaman.
-- Default `pageSize = 12` (kelipatan 2 dan 3 → rapi di grid card 2/3 kolom).
-- Simpan `page` di URL search params (`?page=2`) supaya bisa di-bookmark, share, dan tahan refresh — pakai `validateSearch` TanStack Router.
+### 2. Server function baru
 
-**3. `/master/*` → Pagination client-side cukup.**
-Master data (golongan/rangka/tempat/user/nomor-surat) jumlahnya kecil dan jarang berubah. Pagination cukup di sisi client setelah filter — tidak perlu ubah server function. Default `pageSize = 10`.
+`updateLpdSpt` di `src/lib/lpd.functions.ts`:
 
-**4. Soal format Card vs Tabel.**
-Anda menyebut suka format card seperti di `/tugas`. Tapi `/lpd` saat ini masih **tabel**, bukan card. Jika Anda mau, saya bisa sekalian ubah `/lpd` ke format card seperti `/tugas` (lebih ramah mobile, lebih scannable). Lihat pertanyaan di akhir.
+- `createServerFn({ method: "POST" })` + `requireSupabaseAuth`.
+- Zod schema sama seperti `CreateLpdSchema` + tambahan `id: uuid`.
+- Panggil RPC di atas, return `{ ok: true }`.
 
-**5. Komponen pagination dipakai bersama.**
-Buat satu `PaginationBar` reusable (pakai shadcn `Pagination` yang sudah ada) dengan props `{ page, totalPages, onChange }`. Pakai di semua halaman yang butuh.
+### 3. Route edit baru
 
-# Rencana Implementasi
+`src/routes/_authenticated/lpd.$id.edit.tsx`:
 
-## A. Server functions (`src/lib/lpd.functions.ts`)
+- Akses Admin-only: kalau bukan Admin tampilkan "Akses ditolak" (pola sama dengan `lpd.baru.tsx`).
+- Form **identik** dengan `lpd.baru.tsx` (rangka, tempat, kepala, petugas + tanggal & jenis), tapi:
+  - Prefill dari `getLpdDetail` (sudah ada).
+  - Tampilkan header read-only: nomor surat + status saat ini.
+  - Tombol submit = "Simpan Perubahan", panggil `updateLpdSpt`.
+  - Setelah sukses → toast + navigate balik ke `/lpd/$id`.
+- Refactor kecil: pindahkan tiga helper `Section` / `Fld` / `Row` / `QuickSelect` dari `lpd.baru.tsx` ke `src/components/lpd/spt-form-bits.tsx` lalu import dari kedua route (hindari duplikasi).
 
-- `listLpd`: tambah input `page` (default 1) dan `pageSize` (default 12). Gunakan `.range(from, to)` + `.select('*', { count: 'exact' })`. Return `{ rows, total, page, pageSize }`.
-- `listMyTasks`: pola yang sama, default `pageSize = 12`.
-- Dashboard `recent` tetap pakai mode lama (`limit: 8`) — tidak diubah.
+### 4. Tombol "Edit SPT" di halaman detail
 
-## B. Komponen reusable
+Di `src/routes/_authenticated/lpd.$id.tsx`, tambah tombol kecil di header detail SPT, tampil **hanya jika `isAdmin**`, link ke `/lpd/$id/edit`. Ditaruh dekat tombol Print / aksi admin lain biar konsisten.
 
-- `src/components/ui/pagination-bar.tsx` — wrapper di atas shadcn `Pagination` dengan logika halaman (Prev/1…/active/…/Last/Next + ellipsis) + info "Menampilkan X–Y dari Z".
+## Pertanyaan untuk dikonfirmasi
 
-## C. `/lpd` (`src/routes/_authenticated/lpd.index.tsx`)
+Tidak ada — scope cukup jelas, ikuti pola yang sudah ada di `lpd.baru.tsx` dan `create_lpd_baru` RPC. Jika setelah review Anda ingin batasi edit hanya saat `approval_status IN ('Draft','Ditolak')` (mis. supaya tidak bisa diubah saat laporan sudah disetujui), tinggal ditambahkan satu cek di RPC — tapi default plan ini: **Admin selalu bisa edit metadata SPT**, sesuai permintaan Anda. Jawaban : betul ini membatasi hanya saat ada case admin sudah membuat spt pada buat spt. ternyata terjadi kesalahan. admin bisa edit. ini tidak menyentuh terkait laporan hasil pelaksanaan tugas. namun ketika petugas sudah mengisi laporan hasil pelaksanaan tugas dan menunggu approval admin. tombol edit ini sudah tidak bisa difungsikan atau maksud saya secara teknis sudah diyakini saat buat spt sudah benar.
 
-- Tambah `validateSearch` (zod): `{ page?: number, status?: 'all'|'Belum'|'Sudah'|'Batal', q?: string }`.
-- Ganti `useState` filter+search menjadi URL search params (`Route.useSearch()` + `useNavigate`).
-- Reset ke `page=1` ketika filter/search berubah.
-- Tampilkan `PaginationBar` di bawah daftar.
-- (Opsional, lihat pertanyaan) ubah ke format card.
+## Detail teknis singkat
 
-## D. `/tugas` (`src/routes/_authenticated/tugas.tsx`)
-
-- Sudah card. Tambah `page` di URL search params, panggil `listMyTasks` dengan `page`/`pageSize`, render `PaginationBar`.
-
-## E. `/master/golongan`, `/master/rangka`, `/master/tempat` (`SimpleNameCrud`)
-
-- Tambah state `page` (local) di `SimpleNameCrud`.
-- Potong `filtered` jadi `paginated` (`slice((page-1)*size, page*size)`).
-- Reset `page` ke 1 saat `search` berubah.
-- Render `PaginationBar` di bawah tabel.
-
-## F. `/master/user` dan `/master/nomor-surat`
-
-- Pola yang sama dengan E (client-side pagination atas hasil filter), default `pageSize = 10`.
-
-# Yang Tidak Akan Disentuh
-
-- `/dashboard` LPD Terbaru — tetap 8 item tanpa pagination.
-- Logika auth/RLS/CRUD — tidak diubah.
-- Format tabel master akan dipertahankan (cocok untuk admin yang perlu skim cepat banyak data).
-
-# Pertanyaan untuk Anda Sebelum Saya Mulai
-
-1. **Apakah `/lpd` ingin diubah ke format card** seperti `/tugas` (sesuai preferensi Anda), atau tetap tabel + tambahkan pagination saja? tetap tabel + tambah pagination.
-2. **Default** `pageSize`: setuju 12 untuk daftar LPD/tugas dan 10 untuk master? Atau Anda ingin angka lain? setuju.
-3. **Simpan page di URL** (`?page=2`)? Saya rekomendasi ya, supaya bisa di-share dan tahan refresh.
+- **Migration**: 1 file, 1 fungsi `public.update_lpd_spt(...)` dengan `SET search_path = public`, `SECURITY DEFINER`.
+- **Tidak ada perubahan schema/kolom**, tidak ada perubahan RLS (policy `Admin update lpd` sudah meng-cover UPDATE; `Admins insert/delete detail_petugas` sudah meng-cover sync petugas dari sisi RPC owner).
+- **File**:
+  - baru: `supabase/migrations/<ts>_update_lpd_spt.sql`
+  - baru: `src/routes/_authenticated/lpd.$id.edit.tsx`
+  - baru: `src/components/lpd/spt-form-bits.tsx`
+  - edit: `src/lib/lpd.functions.ts` (tambah `updateLpdSpt`)
+  - edit: `src/routes/_authenticated/lpd.baru.tsx` (pakai helper dari `spt-form-bits.tsx`)
+  - edit: `src/routes/_authenticated/lpd.$id.tsx` (tombol "Edit SPT" admin-only)
