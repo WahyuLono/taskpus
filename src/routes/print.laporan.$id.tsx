@@ -194,33 +194,43 @@ function PrintLaporanPage() {
               <td>{formatDateRangeFull(lpd.tgl_kegiatan, lpd.tgl_selesai)}</td>
             </tr>
             <tr>
-              <td className="num">4.</td>
-              <td className="label">Hasil Kegiatan</td>
               <td>
-                <div className="lpd-group">A. INPUT</div>
-                <DetailRow no="1" label="Pelaksana Kegiatan" value={`${petugas.length} orang`} />
-                <DetailRow no="2" label="Sumber Dana" value="BOK" />
-                <DetailRow no="3" label="Alat yang Digunakan" value={lpd.input_alat ?? "—"} />
-                <DetailRow no="4" label="Metode" value={lpd.input_metode ?? "—"} />
-                <DetailRow no="5" label="Lama Kegiatan" value={lpd.input_lama_kegiatan ?? "—"} />
+                <table className="hk-table">
+                  <tbody>
+                    <tr>
+                      <td className="hk-letter">A.</td>
+                      <td className="hk-group" colSpan={4}>INPUT</td>
+                    </tr>
+                    <HkRow no="1" label="Pelaksana Kegiatan" value={`${petugas.length} orang`} />
+                    <HkRow no="2" label="Sumber Dana" value="BOK" />
+                    <HkRow no="3" label="Alat yang Digunakan" value={lpd.input_alat ?? "—"} />
+                    <HkRow no="4" label="Metode" value={lpd.input_metode ?? "—"} />
+                    <HkRow no="5" label="Lama Kegiatan" value={lpd.input_lama_kegiatan ?? "—"} />
 
-                <div className="lpd-group">B. PROSES</div>
-                <DetailRow no="1" label="Sasaran" value={lpd.proses_sasaran ?? "—"} />
-                <DetailRow no="2" label="Jadwal" value={formatDate(lpd.tgl_kegiatan)} />
-                <DetailRow no="3" label="Tempat Pelaksanaan" value={lpd.master_tempat?.nama_tempat ?? "—"} />
-                <DetailRow no="4" label="Hambatan" value={lpd.proses_hambatan ?? "—"} />
+                    <tr>
+                      <td className="hk-letter">B.</td>
+                      <td className="hk-group" colSpan={4}>PROSES</td>
+                    </tr>
+                    <HkRow no="1" label="Sasaran" value={lpd.proses_sasaran ?? "—"} />
+                    <HkRow no="2" label="Jadwal" value={formatDate(lpd.tgl_kegiatan)} />
+                    <HkRow no="3" label="Tempat Pelaksanaan" value={lpd.master_tempat?.nama_tempat ?? "—"} />
+                    <HkRow no="4" label="Hambatan" value={lpd.proses_hambatan ?? "—"} />
 
-                <div className="lpd-row-inline">
-                  <div>C. OUTPUT</div>
-                  <div>:</div>
-                  <div style={{ whiteSpace: "pre-line" }}>{lpd.output ?? "—"}</div>
-                </div>
-
-                <div className="lpd-row-inline">
-                  <div>D. TINDAK LANJUT</div>
-                  <div>:</div>
-                  <div style={{ whiteSpace: "pre-line" }}>{lpd.tindak_lanjut ?? "—"}</div>
-                </div>
+                    <tr>
+                      <td className="hk-letter">C.</td>
+                      <td className="hk-group" colSpan={2}>OUTPUT</td>
+                      <td className="hk-colon">:</td>
+                      <td style={{ whiteSpace: "pre-line" }}>{lpd.output ?? "—"}</td>
+                    </tr>
+                    <tr>
+                      <td className="hk-letter">D.</td>
+                      <td className="hk-group" colSpan={2}>TINDAK LANJUT</td>
+                      <td className="hk-colon">:</td>
+                      <td style={{ whiteSpace: "pre-line" }}>{lpd.tindak_lanjut ?? "—"}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
               </td>
             </tr>
             <tr>
