@@ -44,7 +44,7 @@ function LpdListPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (searchInput !== searchParam) {
-        navigate({ search: (p) => ({ ...p, q: searchInput, page: 1 }) });
+        navigate({ search: (p: any) => ({ ...p, q: searchInput, page: 1 }) });
       }
     }, 300);
     return () => clearTimeout(t);
@@ -70,9 +70,9 @@ function LpdListPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const setStatus = (s: (typeof FILTERS)[number]["key"]) =>
-    navigate({ search: (p) => ({ ...p, status: s, page: 1 }) });
+    navigate({ search: (p: any) => ({ ...p, status: s, page: 1 }) });
   const setPage = (n: number) =>
-    navigate({ search: (p) => ({ ...p, page: n }) });
+    navigate({ search: (p: any) => ({ ...p, page: n }) });
 
   return (
     <div className="space-y-5">
