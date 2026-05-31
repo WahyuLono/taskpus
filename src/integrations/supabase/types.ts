@@ -201,6 +201,10 @@ export type Database = {
       }
       transaksi_lpd: {
         Row: {
+          approval_status: Database["public"]["Enums"]["approval_status_lpd"]
+          approved_at: string | null
+          approved_by: string | null
+          catatan_reject: string | null
           created_at: string | null
           deleted_at: string | null
           id_kepala: string | null
@@ -226,6 +230,10 @@ export type Database = {
           url_foto: string | null
         }
         Insert: {
+          approval_status?: Database["public"]["Enums"]["approval_status_lpd"]
+          approved_at?: string | null
+          approved_by?: string | null
+          catatan_reject?: string | null
           created_at?: string | null
           deleted_at?: string | null
           id_kepala?: string | null
@@ -251,6 +259,10 @@ export type Database = {
           url_foto?: string | null
         }
         Update: {
+          approval_status?: Database["public"]["Enums"]["approval_status_lpd"]
+          approved_at?: string | null
+          approved_by?: string | null
+          catatan_reject?: string | null
           created_at?: string | null
           deleted_at?: string | null
           id_kepala?: string | null
@@ -304,6 +316,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_lpd: { Args: { p_id_lpd: string }; Returns: undefined }
       create_lpd_baru: {
         Args: {
           p_id_kepala: string
@@ -332,9 +345,17 @@ export type Database = {
         Args: { _requester: string; _target_user: string }
         Returns: boolean
       }
+      reject_lpd: {
+        Args: { p_catatan: string; p_id_lpd: string }
+        Returns: undefined
+      }
       shares_lpd_assignment: {
         Args: { _requester: string; _target_user: string }
         Returns: boolean
+      }
+      submit_laporan_for_approval: {
+        Args: { p_id_lpd: string }
+        Returns: Database["public"]["Enums"]["approval_status_lpd"]
       }
       user_can_access_lpd_path: { Args: { _path: string }; Returns: boolean }
       validate_allocation_range: {
@@ -348,6 +369,7 @@ export type Database = {
       }
     }
     Enums: {
+      approval_status_lpd: "Draft" | "Menunggu" | "Disetujui" | "Ditolak"
       role_aplikasi: "Admin" | "Petugas"
       status_pegawai: "ASN" | "NON ASN"
       status_surat: "Belum" | "Sudah" | "Batal"
@@ -478,6 +500,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      approval_status_lpd: ["Draft", "Menunggu", "Disetujui", "Ditolak"],
       role_aplikasi: ["Admin", "Petugas"],
       status_pegawai: ["ASN", "NON ASN"],
       status_surat: ["Belum", "Sudah", "Batal"],
