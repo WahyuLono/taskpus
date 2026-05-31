@@ -1,24 +1,21 @@
-## Ubah UI Petugas Ditugaskan di /lpd/baru
+## Samakan UI Petugas Ditugaskan di Edit SPT
 
-Saat ini section "Petugas Ditugaskan" menampilkan daftar semua pegawai sekaligus. Akan diubah menjadi pola search-then-pick.
+Saat ini `src/routes/_authenticated/lpd.$id_.edit.tsx` masih menampilkan daftar semua pegawai pada section "Petugas Ditugaskan". Terapkan pola search-then-pick yang sama dengan halaman Buat SPT.
 
-### Perubahan UI (hanya frontend, file: `src/routes/_authenticated/lpd.baru.tsx`)
+### Perubahan (frontend only, satu file: `src/routes/_authenticated/lpd.$id_.edit.tsx`)
 
-1. **Chip petugas terpilih** di atas input pencarian
-   - Menampilkan nama tiap petugas yang sudah dicentang sebagai chip dengan tombol ✕ untuk menghapus.
-   - Jika belum ada yang dipilih, tampilkan teks samar "Belum ada petugas dipilih".
+1. Ganti `filteredPetugas` (useMemo) menjadi:
+   - `petugasAll`, `selectedPetugas` (yang sudah dipilih), dan `filteredPetugas` yang hanya berisi hasil pencarian saat `petugasSearch.trim()` terisi, dan **mengecualikan** petugas yang sudah dipilih.
 
-2. **Input pencarian** (tetap seperti sekarang, placeholder "Cari nama atau NIP…").
-
-3. **Daftar hasil pencarian** hanya muncul ketika `petugasSearch.trim().length > 0`.
-   - Filter dari `petugas.data` berdasarkan nama / NIP / username (logic sama).
-   - Petugas yang sudah dipilih **tidak** muncul lagi di hasil (sudah ada di chip di atas).
-   - Tampilan baris tetap sama: nama, NIP • jabatan, badge status_kepegawaian, checkbox di kiri.
-   - Saat checkbox dicentang → tambahkan ke `petugasIds` lalu **reset `petugasSearch` ke ""** sehingga daftar tertutup dan user bisa mengetik pencarian berikutnya.
-   - Jika tidak ada hasil cocok → tampilkan "Tidak ada pegawai cocok."
-
-4. **Tanpa pencarian** → tidak ada daftar pegawai sama sekali, hanya chip + input + hint kecil "Ketik nama atau NIP untuk mencari petugas."
+2. Render section "Petugas Ditugaskan":
+   - Chip petugas terpilih di atas (nama + tombol ✕ untuk hapus).
+   - Jika belum ada, tampilkan "Belum ada petugas dipilih."
+   - Input pencarian (placeholder "Cari nama atau NIP…").
+   - Daftar hasil hanya muncul saat ada teks pencarian; baris pakai layout sama (checkbox, nama, NIP • jabatan, badge status_kepegawaian).
+   - Saat dicentang → `togglePetugas` lalu `setPetugasSearch("")` agar daftar tertutup.
+   - Jika kosong → "Tidak ada pegawai cocok."
+   - Tanpa pencarian → hint kecil "Ketik nama atau NIP untuk mencari petugas."
 
 ### Yang tidak berubah
-- Server function `listPetugas`, validasi submit, ringkasan, dan jumlah `petugasIds`.
-- Tidak ada perubahan database / backend / RPC.
+- Inisialisasi `petugasIds` dari `assigned` (petugas existing tetap auto-terpilih dan muncul sebagai chip).
+- Server functions, validasi, submit, ringkasan.
