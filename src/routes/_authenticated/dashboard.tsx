@@ -108,14 +108,14 @@ function DashboardPage() {
                   </td>
                 </tr>
               )}
-              {recent.data?.length === 0 && (
+              {recentRows.length === 0 && !recent.isLoading && (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-on-surface-variant">
                     Belum ada LPD.
                   </td>
                 </tr>
               )}
-              {recent.data?.map((row: any) => (
+              {recentRows.map((row: any) => (
                 <tr key={row.id_lpd} className="hover:bg-primary/5 transition-colors">
                   <td className="px-5 py-3 font-medium">
                     <Link
