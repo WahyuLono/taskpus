@@ -194,6 +194,8 @@ function PrintLaporanPage() {
               <td>{formatDateRangeFull(lpd.tgl_kegiatan, lpd.tgl_selesai)}</td>
             </tr>
             <tr>
+              <td className="num">4.</td>
+              <td className="label">Hasil Kegiatan</td>
               <td>
                 <table className="hk-table">
                   <tbody>
@@ -230,7 +232,6 @@ function PrintLaporanPage() {
                     </tr>
                   </tbody>
                 </table>
-              </td>
               </td>
             </tr>
             <tr>
