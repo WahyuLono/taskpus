@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -138,6 +139,13 @@ function Page() {
         (r.jabatan ?? "").toLowerCase().includes(s),
     );
   }, [rows, search]);
+
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  useEffect(() => setPage(1), [search]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const golMap = useMemo(() => {
     const m = new Map<number, string>();
