@@ -90,7 +90,7 @@ function PrintLaporanPage() {
         }
         .lpd-page {
           font-family: Arial, sans-serif;
-          font-size: 11pt;
+          font-size: 10pt;
           line-height: 1.3;
           color: #000;
           background: white;
