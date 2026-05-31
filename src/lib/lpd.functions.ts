@@ -33,14 +33,17 @@ const ListLpdSchema = z
   .object({
     status: z.enum(["Belum", "Sudah", "Batal"]).optional(),
     search: z.string().optional(),
-    limit: z.number().min(1).max(200).default(50),
+    page: z.number().int().min(1).default(1),
+    pageSize: z.number().int().min(1).max(200).default(12),
   })
-  .default({ limit: 50 });
+  .default({ page: 1, pageSize: 12 });
 
 export const listLpd = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ListLpdSchema.parse(d ?? {}))
   .handler(async ({ data, context }) => {
+    const from = (data.page - 1) * data.pageSize;
+    const to = from + data.pageSize - 1;
     let q = context.supabase
       .from("transaksi_lpd")
       .select(
@@ -48,15 +51,21 @@ export const listLpd = createServerFn({ method: "GET" })
          master_rangka:id_rangka(nama_rangka),
          master_tempat:id_tempat(nama_tempat),
          kepala:id_kepala(nama, jabatan)`,
+        { count: "exact" },
       )
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
-      .limit(data.limit);
+      .range(from, to);
     if (data.status) q = q.eq("status_lpd", data.status);
     if (data.search) q = q.ilike("no_surat", `%${data.search}%`);
-    const { data: rows, error } = await q;
+    const { data: rows, error, count } = await q;
     if (error) throw new Error(error.message);
-    return rows;
+    return {
+      rows: rows ?? [],
+      total: count ?? 0,
+      page: data.page,
+      pageSize: data.pageSize,
+    };
   });
 
 export const getLpdDetail = createServerFn({ method: "GET" })
@@ -189,26 +198,44 @@ export const rejectLpd = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const ListMyTasksSchema = z
+  .object({
+    page: z.number().int().min(1).default(1),
+    pageSize: z.number().int().min(1).max(200).default(12),
+  })
+  .default({ page: 1, pageSize: 12 });
+
 export const listMyTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => ListMyTasksSchema.parse(d ?? {}))
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: details, error } = await supabase
+    const from = (data.page - 1) * data.pageSize;
+    const to = from + data.pageSize - 1;
+    const { data: details, error, count } = await supabase
       .from("detail_petugas")
       .select(
         `id_lpd,
          transaksi_lpd:id_lpd(
            id_lpd, no_surat, no_surat_slug, jenis_perjadin, tgl_kegiatan, tgl_selesai,
-           lama_hari, status_lpd, url_foto,
+           lama_hari, status_lpd, url_foto, deleted_at,
            master_rangka:id_rangka(nama_rangka),
            master_tempat:id_tempat(nama_tempat)
          )`,
+        { count: "exact" },
       )
-      .eq("id_user_petugas", userId);
+      .eq("id_user_petugas", userId)
+      .range(from, to);
     if (error) throw new Error(error.message);
-    return (details ?? [])
+    const rows = (details ?? [])
       .map((d) => d.transaksi_lpd)
       .filter((x): x is NonNullable<typeof x> => !!x && !(x as any).deleted_at);
+    return {
+      rows,
+      total: count ?? 0,
+      page: data.page,
+      pageSize: data.pageSize,
+    };
   });
 
 const CreateLpdSchema = z.object({

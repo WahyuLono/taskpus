@@ -19,9 +19,10 @@ function DashboardPage() {
   const stats = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats(), enabled });
   const recent = useQuery({
     queryKey: ["lpd-recent"],
-    queryFn: () => fetchList({ data: { limit: 8 } }),
+    queryFn: () => fetchList({ data: { page: 1, pageSize: 8 } }),
     enabled,
   });
+  const recentRows = recent.data?.rows ?? [];
 
   const cards = [
     { label: "Total LPD", value: stats.data?.total ?? "—", icon: "description", tint: "primary" },
@@ -107,14 +108,14 @@ function DashboardPage() {
                   </td>
                 </tr>
               )}
-              {recent.data?.length === 0 && (
+              {recentRows.length === 0 && !recent.isLoading && (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-on-surface-variant">
                     Belum ada LPD.
                   </td>
                 </tr>
               )}
-              {recent.data?.map((row: any) => (
+              {recentRows.map((row: any) => (
                 <tr key={row.id_lpd} className="hover:bg-primary/5 transition-colors">
                   <td className="px-5 py-3 font-medium">
                     <Link
