@@ -137,7 +137,7 @@ export const submitLaporan = createServerFn({ method: "POST" })
     const { error: updErr } = await supabase
       .from("transaksi_lpd")
       .update({
-        status_lpd: "Sudah",
+        
         input_alat: data.laporan.alat,
         input_metode: data.laporan.metode,
         input_lama_kegiatan: data.laporan.lama_kegiatan,
