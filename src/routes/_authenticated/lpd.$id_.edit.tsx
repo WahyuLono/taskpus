@@ -101,14 +101,24 @@ function EditSPTPage() {
   const statusLpd = lpd?.status_lpd as string | undefined;
   const canEdit = statusLpd === "Belum" && approval === "Draft";
 
+  const petugasAll = (petugas.data ?? []) as any[];
+  const selectedPetugas = useMemo(
+    () => petugasAll.filter((p) => petugasIds.includes(p.id_user)),
+    [petugasAll, petugasIds],
+  );
+  const searchTrim = petugasSearch.trim().toLowerCase();
   const filteredPetugas = useMemo(
     () =>
-      (petugas.data ?? []).filter((p: any) =>
-        `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`
-          .toLowerCase()
-          .includes(petugasSearch.toLowerCase()),
-      ),
-    [petugas.data, petugasSearch],
+      searchTrim
+        ? petugasAll.filter(
+            (p) =>
+              !petugasIds.includes(p.id_user) &&
+              `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`
+                .toLowerCase()
+                .includes(searchTrim),
+          )
+        : [],
+    [petugasAll, petugasIds, searchTrim],
   );
 
   const submit = useMutation({
