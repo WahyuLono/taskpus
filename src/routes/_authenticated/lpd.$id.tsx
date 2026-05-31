@@ -133,15 +133,27 @@ function LpdDetailPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isAdmin && (
-            <a
-              href={`/print/lpd/${id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
-            >
-              <span className="material-symbols-outlined !text-[20px]">print</span>
-              Cetak Surat Tugas (ST)
-            </a>
+            <>
+              {approval !== "Menunggu" && approval !== "Disetujui" && (
+                <Link
+                  to="/lpd/$id/edit"
+                  params={{ id }}
+                  className="inline-flex items-center gap-2 h-11 px-4 rounded-md border border-outline-variant bg-card text-on-surface text-sm font-semibold hover:bg-primary/5"
+                >
+                  <span className="material-symbols-outlined !text-[20px]">edit</span>
+                  Edit SPT
+                </Link>
+              )}
+              <a
+                href={`/print/lpd/${id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
+              >
+                <span className="material-symbols-outlined !text-[20px]">print</span>
+                Cetak Surat Tugas (ST)
+              </a>
+            </>
           )}
           {!isAdmin && isPetugasOfThisLpd && approval === "Disetujui" && (
             <a

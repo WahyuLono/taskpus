@@ -26,6 +26,7 @@ import { Route as AuthenticatedMasterNomorSuratRouteImport } from './routes/_aut
 import { Route as AuthenticatedMasterGolonganRouteImport } from './routes/_authenticated/master.golongan'
 import { Route as AuthenticatedLpdBaruRouteImport } from './routes/_authenticated/lpd.baru'
 import { Route as AuthenticatedLpdIdRouteImport } from './routes/_authenticated/lpd.$id'
+import { Route as AuthenticatedLpdIdEditRouteImport } from './routes/_authenticated/lpd.$id.edit'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -116,6 +117,11 @@ const AuthenticatedLpdIdRoute = AuthenticatedLpdIdRouteImport.update({
   path: '/lpd/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLpdIdEditRoute = AuthenticatedLpdIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AuthenticatedLpdIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -123,7 +129,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/tugas': typeof AuthenticatedTugasRoute
-  '/lpd/$id': typeof AuthenticatedLpdIdRoute
+  '/lpd/$id': typeof AuthenticatedLpdIdRouteWithChildren
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/print/lpd/$id': typeof PrintLpdIdRoute
   '/lpd/': typeof AuthenticatedLpdIndexRoute
   '/master/': typeof AuthenticatedMasterIndexRoute
+  '/lpd/$id/edit': typeof AuthenticatedLpdIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -141,7 +148,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/tugas': typeof AuthenticatedTugasRoute
-  '/lpd/$id': typeof AuthenticatedLpdIdRoute
+  '/lpd/$id': typeof AuthenticatedLpdIdRouteWithChildren
   '/lpd/baru': typeof AuthenticatedLpdBaruRoute
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/print/lpd/$id': typeof PrintLpdIdRoute
   '/lpd': typeof AuthenticatedLpdIndexRoute
   '/master': typeof AuthenticatedMasterIndexRoute
+  '/lpd/$id/edit': typeof AuthenticatedLpdIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,7 +169,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
   '/_authenticated/tugas': typeof AuthenticatedTugasRoute
-  '/_authenticated/lpd/$id': typeof AuthenticatedLpdIdRoute
+  '/_authenticated/lpd/$id': typeof AuthenticatedLpdIdRouteWithChildren
   '/_authenticated/lpd/baru': typeof AuthenticatedLpdBaruRoute
   '/_authenticated/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/_authenticated/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/print/lpd/$id': typeof PrintLpdIdRoute
   '/_authenticated/lpd/': typeof AuthenticatedLpdIndexRoute
   '/_authenticated/master/': typeof AuthenticatedMasterIndexRoute
+  '/_authenticated/lpd/$id/edit': typeof AuthenticatedLpdIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/print/lpd/$id'
     | '/lpd/'
     | '/master/'
+    | '/lpd/$id/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/print/lpd/$id'
     | '/lpd'
     | '/master'
+    | '/lpd/$id/edit'
   id:
     | '__root__'
     | '/'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/print/lpd/$id'
     | '/_authenticated/lpd/'
     | '/_authenticated/master/'
+    | '/_authenticated/lpd/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -360,14 +372,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLpdIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/lpd/$id/edit': {
+      id: '/_authenticated/lpd/$id/edit'
+      path: '/edit'
+      fullPath: '/lpd/$id/edit'
+      preLoaderRoute: typeof AuthenticatedLpdIdEditRouteImport
+      parentRoute: typeof AuthenticatedLpdIdRoute
+    }
   }
 }
+
+interface AuthenticatedLpdIdRouteChildren {
+  AuthenticatedLpdIdEditRoute: typeof AuthenticatedLpdIdEditRoute
+}
+
+const AuthenticatedLpdIdRouteChildren: AuthenticatedLpdIdRouteChildren = {
+  AuthenticatedLpdIdEditRoute: AuthenticatedLpdIdEditRoute,
+}
+
+const AuthenticatedLpdIdRouteWithChildren =
+  AuthenticatedLpdIdRoute._addFileChildren(AuthenticatedLpdIdRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
   AuthenticatedTugasRoute: typeof AuthenticatedTugasRoute
-  AuthenticatedLpdIdRoute: typeof AuthenticatedLpdIdRoute
+  AuthenticatedLpdIdRoute: typeof AuthenticatedLpdIdRouteWithChildren
   AuthenticatedLpdBaruRoute: typeof AuthenticatedLpdBaruRoute
   AuthenticatedMasterGolonganRoute: typeof AuthenticatedMasterGolonganRoute
   AuthenticatedMasterNomorSuratRoute: typeof AuthenticatedMasterNomorSuratRoute
@@ -382,7 +412,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
   AuthenticatedTugasRoute: AuthenticatedTugasRoute,
-  AuthenticatedLpdIdRoute: AuthenticatedLpdIdRoute,
+  AuthenticatedLpdIdRoute: AuthenticatedLpdIdRouteWithChildren,
   AuthenticatedLpdBaruRoute: AuthenticatedLpdBaruRoute,
   AuthenticatedMasterGolonganRoute: AuthenticatedMasterGolonganRoute,
   AuthenticatedMasterNomorSuratRoute: AuthenticatedMasterNomorSuratRoute,
@@ -407,13 +437,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

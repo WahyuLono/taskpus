@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -11,29 +11,36 @@ import {
   addRangka,
   addTempat,
 } from "@/lib/master.functions";
-import { createLpd } from "@/lib/lpd.functions";
+import { getLpdDetail, updateLpdSpt } from "@/lib/lpd.functions";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
+import { Section, Fld, Row, QuickSelect } from "./lpd.baru";
 
-export const Route = createFileRoute("/_authenticated/lpd/baru")({
-  component: BuatSPTPage,
+export const Route = createFileRoute("/_authenticated/lpd/$id/edit")({
+  component: EditSPTPage,
 });
 
-function BuatSPTPage() {
+function EditSPTPage() {
+  const { id } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: me } = useCurrentUser();
 
+  const fetchDetail = useServerFn(getLpdDetail);
   const fetchRangka = useServerFn(listRangka);
   const fetchTempat = useServerFn(listTempat);
   const fetchKepala = useServerFn(listKepala);
   const fetchPetugas = useServerFn(listPetugas);
-  const submitLpd = useServerFn(createLpd);
+  const submitUpdate = useServerFn(updateLpdSpt);
   const submitRangka = useServerFn(addRangka);
   const submitTempat = useServerFn(addTempat);
+
+  const detail = useQuery({
+    queryKey: ["lpd-detail", id],
+    queryFn: () => fetchDetail({ data: { id } }),
+  });
 
   const enabled = !!me;
   const rangka = useQuery({ queryKey: ["rangka"], queryFn: () => fetchRangka(), enabled });
@@ -41,16 +48,31 @@ function BuatSPTPage() {
   const kepala = useQuery({ queryKey: ["kepala"], queryFn: () => fetchKepala(), enabled });
   const petugas = useQuery({ queryKey: ["petugas"], queryFn: () => fetchPetugas(), enabled });
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [tglBuat, setTglBuat] = useState(today);
-  const [tglKegiatan, setTglKegiatan] = useState(today);
-  const [tglSelesai, setTglSelesai] = useState(today);
+  const [tglBuat, setTglBuat] = useState("");
+  const [tglKegiatan, setTglKegiatan] = useState("");
+  const [tglSelesai, setTglSelesai] = useState("");
   const [jenis, setJenis] = useState("Perjalanan Dinas Dalam Kota");
   const [idRangka, setIdRangka] = useState<number | "">("");
   const [idTempat, setIdTempat] = useState<number | "">("");
   const [idKepala, setIdKepala] = useState<string>("");
   const [petugasIds, setPetugasIds] = useState<string[]>([]);
   const [petugasSearch, setPetugasSearch] = useState("");
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Prefill once
+  useEffect(() => {
+    if (prefilled || !detail.data) return;
+    const { lpd, petugas: assigned } = detail.data as any;
+    setTglBuat((lpd.tgl_buat ?? "").slice(0, 10));
+    setTglKegiatan((lpd.tgl_kegiatan ?? "").slice(0, 10));
+    setTglSelesai((lpd.tgl_selesai ?? "").slice(0, 10));
+    setJenis(lpd.jenis_perjadin ?? "Perjalanan Dinas Dalam Kota");
+    setIdRangka(lpd.id_rangka ?? "");
+    setIdTempat(lpd.id_tempat ?? "");
+    setIdKepala(lpd.id_kepala ?? "");
+    setPetugasIds((assigned ?? []).map((p: any) => p.id_user));
+    setPrefilled(true);
+  }, [detail.data, prefilled]);
 
   const togglePetugas = (id: string) =>
     setPetugasIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -74,10 +96,15 @@ function BuatSPTPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const lpd = (detail.data as any)?.lpd;
+  const approval = lpd?.approval_status as string | undefined;
+  const locked = approval === "Menunggu" || approval === "Disetujui";
+
   const submit = useMutation({
     mutationFn: () =>
-      submitLpd({
+      submitUpdate({
         data: {
+          id,
           tgl_buat: tglBuat,
           tgl_kegiatan: tglKegiatan,
           tgl_selesai: tglSelesai,
@@ -88,12 +115,13 @@ function BuatSPTPage() {
           petugas_ids: petugasIds,
         },
       }),
-    onSuccess: (res) => {
-      toast.success("SPT dibuat", { description: res.no_surat });
-      qc.invalidateQueries();
-      navigate({ to: "/lpd/$id", params: { id: res.id_lpd } });
+    onSuccess: () => {
+      toast.success("Perubahan SPT disimpan");
+      qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
+      qc.invalidateQueries({ queryKey: ["lpd-list"] });
+      navigate({ to: "/lpd/$id", params: { id } });
     },
-    onError: (e: Error) => toast.error("Gagal membuat SPT", { description: e.message }),
+    onError: (e: Error) => toast.error("Gagal menyimpan", { description: e.message }),
   });
 
   if (me && me.role_user !== "Admin") {
@@ -101,8 +129,36 @@ function BuatSPTPage() {
       <div className="bg-card border border-outline-variant rounded-xl p-8 text-center">
         <p className="font-semibold text-on-surface">Akses ditolak</p>
         <p className="text-sm text-on-surface-variant mt-1">
-          Hanya Admin yang dapat membuat Surat Perintah Tugas.
+          Hanya Admin yang dapat mengubah Surat Perintah Tugas.
         </p>
+      </div>
+    );
+  }
+
+  if (detail.isLoading || !lpd) {
+    return (
+      <div className="flex items-center gap-2 text-on-surface-variant py-12 justify-center">
+        <span className="material-symbols-outlined animate-spin">progress_activity</span>
+        Memuat data SPT…
+      </div>
+    );
+  }
+
+  if (locked) {
+    return (
+      <div className="space-y-4">
+        <Link to="/lpd/$id" params={{ id }} className="text-sm text-on-surface-variant hover:text-primary">
+          ← Detail SPT
+        </Link>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+          <p className="font-semibold text-amber-900">
+            SPT terkunci — laporan sudah {approval} oleh petugas
+          </p>
+          <p className="text-sm text-amber-800 mt-1">
+            Data SPT tidak dapat diubah karena petugas sudah mengirim laporan hasil
+            pelaksanaan tugas. Jika harus diubah, lakukan reject laporan terlebih dahulu.
+          </p>
+        </div>
       </div>
     );
   }
@@ -112,8 +168,7 @@ function BuatSPTPage() {
       ? Math.max(
           1,
           Math.round(
-            (new Date(tglSelesai).getTime() - new Date(tglKegiatan).getTime()) /
-              86400000,
+            (new Date(tglSelesai).getTime() - new Date(tglKegiatan).getTime()) / 86400000,
           ) + 1,
         )
       : 0;
@@ -121,8 +176,14 @@ function BuatSPTPage() {
   const valid =
     idRangka && idTempat && idKepala && petugasIds.length > 0 && jenis.trim().length >= 2;
 
-  const filteredPetugas = (petugas.data ?? []).filter((p: any) =>
-    `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`.toLowerCase().includes(petugasSearch.toLowerCase()),
+  const filteredPetugas = useMemo(
+    () =>
+      (petugas.data ?? []).filter((p: any) =>
+        `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`
+          .toLowerCase()
+          .includes(petugasSearch.toLowerCase()),
+      ),
+    [petugas.data, petugasSearch],
   );
 
   return (
@@ -134,6 +195,25 @@ function BuatSPTPage() {
       }}
     >
       <div className="lg:col-span-2 space-y-5">
+        <div className="bg-card border border-outline-variant rounded-xl p-5 shadow-card flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-on-surface-variant">
+              Edit SPT
+            </p>
+            <h1 className="text-xl font-bold text-on-surface mt-1">{lpd.no_surat}</h1>
+            <p className="text-xs text-on-surface-variant mt-1">
+              Nomor surat tidak dapat diubah.
+            </p>
+          </div>
+          <Link
+            to="/lpd/$id"
+            params={{ id }}
+            className="text-sm text-on-surface-variant hover:text-primary"
+          >
+            ← Batal
+          </Link>
+        </div>
+
         <Section title="Informasi Surat" subtitle="Tanggal dan jenis perjalanan dinas">
           <div className="grid sm:grid-cols-2 gap-4">
             <Fld label="Tanggal Buat Surat">
@@ -269,8 +349,9 @@ function BuatSPTPage() {
 
       <aside className="space-y-4 lg:sticky lg:top-[88px] self-start">
         <div className="bg-card border border-outline-variant rounded-xl p-5 shadow-card">
-          <h3 className="font-semibold text-on-surface">Ringkasan</h3>
+          <h3 className="font-semibold text-on-surface">Ringkasan Perubahan</h3>
           <dl className="mt-3 space-y-2 text-sm">
+            <Row k="No. Surat" v={lpd.no_surat} />
             <Row k="Tanggal Buat" v={tglBuat} />
             <Row k="Jenis" v={jenis} />
             <Row k="Lama" v={lamaHari ? `${lamaHari} hari` : "—"} />
@@ -281,142 +362,17 @@ function BuatSPTPage() {
             className="w-full h-11 mt-5"
             disabled={!valid || submit.isPending}
           >
-            {submit.isPending ? "Memproses…" : "Buat SPT"}
+            {submit.isPending ? "Menyimpan…" : "Simpan Perubahan"}
           </Button>
-          <p className="text-[11px] text-on-surface-variant mt-2 text-center">
-            Nomor surat akan digenerate otomatis.
-          </p>
+          <Link
+            to="/lpd/$id"
+            params={{ id }}
+            className="block text-center text-xs text-on-surface-variant mt-3 hover:text-primary"
+          >
+            Batalkan dan kembali
+          </Link>
         </div>
       </aside>
     </form>
-  );
-}
-
-export function Section({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="bg-card border border-outline-variant rounded-xl shadow-card p-5">
-      <header className="mb-4">
-        <h3 className="font-semibold text-on-surface">{title}</h3>
-        {subtitle && <p className="text-xs text-on-surface-variant mt-0.5">{subtitle}</p>}
-      </header>
-      {children}
-    </section>
-  );
-}
-
-export function Fld({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-        {label}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
-export function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="text-on-surface-variant">{k}</dt>
-      <dd className="font-medium text-on-surface text-right">{v}</dd>
-    </div>
-  );
-}
-
-export function QuickSelect({
-  value,
-  options,
-  onChange,
-  onAdd,
-  placeholder,
-  adding,
-}: {
-  value: number | "";
-  options: { value: number; label: string }[];
-  onChange: (v: number | "") => void;
-  onAdd: (nama: string) => void;
-  placeholder: string;
-  adding: boolean;
-}) {
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const current = options.find((o) => o.value === value);
-  const filtered = options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase()));
-  const exact = options.some((o) => o.label.toLowerCase() === q.trim().toLowerCase());
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-left flex items-center justify-between"
-      >
-        <span className={current ? "text-on-surface" : "text-on-surface-variant"}>
-          {current?.label ?? placeholder}
-        </span>
-        <span className="material-symbols-outlined !text-[18px] text-on-surface-variant">
-          expand_more
-        </span>
-      </button>
-      {open && (
-        <div className="absolute z-30 mt-1 w-full bg-popover border border-outline-variant rounded-md shadow-floating max-h-72 overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-outline-variant">
-            <Input
-              autoFocus
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Cari atau ketik baru…"
-              className="h-9"
-            />
-          </div>
-          <div className="overflow-y-auto flex-1">
-            {filtered.map((o) => (
-              <button
-                type="button"
-                key={o.value}
-                onClick={() => {
-                  onChange(o.value);
-                  setOpen(false);
-                  setQ("");
-                }}
-                className={cn(
-                  "w-full text-left px-3 py-2 text-sm hover:bg-primary/5",
-                  o.value === value && "bg-primary/10 text-primary font-medium",
-                )}
-              >
-                {o.label}
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <p className="px-3 py-2 text-xs text-on-surface-variant">Tidak ada hasil.</p>
-            )}
-          </div>
-          {q.trim() && !exact && (
-            <button
-              type="button"
-              disabled={adding}
-              onClick={() => {
-                onAdd(q.trim());
-                setOpen(false);
-                setQ("");
-              }}
-              className="border-t border-outline-variant px-3 py-2 text-sm text-primary font-medium hover:bg-primary/5 disabled:opacity-60 flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined !text-[16px]">add</span>
-              Tambah "{q.trim()}"
-            </button>
-          )}
-        </div>
-      )}
-    </div>
   );
 }

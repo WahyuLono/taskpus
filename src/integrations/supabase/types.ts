@@ -357,6 +357,20 @@ export type Database = {
         Args: { p_id_lpd: string }
         Returns: Database["public"]["Enums"]["approval_status_lpd"]
       }
+      update_lpd_spt: {
+        Args: {
+          p_id_kepala: string
+          p_id_lpd: string
+          p_id_rangka: number
+          p_id_tempat: number
+          p_jenis_perjadin: string
+          p_petugas_ids: string[]
+          p_tgl_buat: string
+          p_tgl_kegiatan: string
+          p_tgl_selesai: string
+        }
+        Returns: Json
+      }
       user_can_access_lpd_path: { Args: { _path: string }; Returns: boolean }
       validate_allocation_range: {
         Args: {

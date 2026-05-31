@@ -273,6 +273,37 @@ export const createLpd = createServerFn({ method: "POST" })
     };
   });
 
+const UpdateLpdSptSchema = z.object({
+  id: z.string().uuid(),
+  tgl_buat: z.string(),
+  tgl_kegiatan: z.string(),
+  tgl_selesai: z.string(),
+  jenis_perjadin: z.string().min(2),
+  id_rangka: z.number().int().positive(),
+  id_tempat: z.number().int().positive(),
+  id_kepala: z.string().uuid(),
+  petugas_ids: z.array(z.string().uuid()).min(1).max(20),
+});
+
+export const updateLpdSpt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => UpdateLpdSptSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("update_lpd_spt", {
+      p_id_lpd: data.id,
+      p_tgl_buat: data.tgl_buat,
+      p_tgl_kegiatan: data.tgl_kegiatan,
+      p_tgl_selesai: data.tgl_selesai,
+      p_jenis_perjadin: data.jenis_perjadin,
+      p_id_rangka: data.id_rangka,
+      p_id_tempat: data.id_tempat,
+      p_id_kepala: data.id_kepala,
+      p_petugas_ids: data.petugas_ids,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 const UpdateStatusSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(["Belum", "Sudah", "Batal"]),
