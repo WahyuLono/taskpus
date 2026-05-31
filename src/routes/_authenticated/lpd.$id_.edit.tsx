@@ -18,7 +18,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import { Section, Fld, Row, QuickSelect } from "./lpd.baru";
 
-export const Route = createFileRoute("/_authenticated/lpd/$id/edit")({
+export const Route = createFileRoute("/_authenticated/lpd/$id_/edit")({
   component: EditSPTPage,
 });
 
@@ -98,7 +98,18 @@ function EditSPTPage() {
 
   const lpd = (detail.data as any)?.lpd;
   const approval = lpd?.approval_status as string | undefined;
-  const locked = approval === "Menunggu" || approval === "Disetujui";
+  const statusLpd = lpd?.status_lpd as string | undefined;
+  const canEdit = statusLpd === "Belum" && approval === "Draft";
+
+  const filteredPetugas = useMemo(
+    () =>
+      (petugas.data ?? []).filter((p: any) =>
+        `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`
+          .toLowerCase()
+          .includes(petugasSearch.toLowerCase()),
+      ),
+    [petugas.data, petugasSearch],
+  );
 
   const submit = useMutation({
     mutationFn: () =>
@@ -144,19 +155,21 @@ function EditSPTPage() {
     );
   }
 
-  if (locked) {
+  if (!canEdit) {
+    const reason =
+      approval !== "Draft"
+        ? `laporan sudah berstatus "${approval}"`
+        : `status surat sudah "${statusLpd}"`;
     return (
       <div className="space-y-4">
         <Link to="/lpd/$id" params={{ id }} className="text-sm text-on-surface-variant hover:text-primary">
           ← Detail SPT
         </Link>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-          <p className="font-semibold text-amber-900">
-            SPT terkunci — laporan sudah {approval} oleh petugas
-          </p>
+          <p className="font-semibold text-amber-900">SPT tidak dapat diedit</p>
           <p className="text-sm text-amber-800 mt-1">
-            Data SPT tidak dapat diubah karena petugas sudah mengirim laporan hasil
-            pelaksanaan tugas. Jika harus diubah, lakukan reject laporan terlebih dahulu.
+            Edit SPT hanya diperbolehkan saat <b>status surat = Belum</b> dan{" "}
+            <b>approval = Draft</b>. Saat ini {reason}.
           </p>
         </div>
       </div>
@@ -176,15 +189,6 @@ function EditSPTPage() {
   const valid =
     idRangka && idTempat && idKepala && petugasIds.length > 0 && jenis.trim().length >= 2;
 
-  const filteredPetugas = useMemo(
-    () =>
-      (petugas.data ?? []).filter((p: any) =>
-        `${p.nama} ${p.nip ?? ""} ${p.username ?? ""}`
-          .toLowerCase()
-          .includes(petugasSearch.toLowerCase()),
-      ),
-    [petugas.data, petugasSearch],
-  );
 
   return (
     <form

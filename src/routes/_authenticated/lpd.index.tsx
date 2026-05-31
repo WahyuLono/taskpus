@@ -35,7 +35,7 @@ const FILTERS = [
 function LpdListPage() {
   const { data: me } = useCurrentUser();
   const { page, status, q: searchParam } = Route.useSearch();
-  const navigate = useNavigate({ from: "/lpd" });
+  const navigate = useNavigate({ from: "/lpd/" });
   const fetchList = useServerFn(listLpd);
 
   // Debounced input untuk search agar tiap ketikan tidak refetch.
