@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,11 +53,22 @@ export function SimpleNameCrud(props: {
   const [nama, setNama] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     if (!s) return rows;
     return rows.filter((r) => r.nama.toLowerCase().includes(s));
   }, [rows, search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const openAdd = () => {
     setNama("");
