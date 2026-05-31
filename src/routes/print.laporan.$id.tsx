@@ -207,7 +207,7 @@ function PrintLaporanPage() {
             <tr>
               <td className="num">3.</td>
               <td className="label">Tanggal Pelaksanaan</td>
-              <td>{formatDateRange(lpd.tgl_kegiatan, lpd.tgl_selesai)}</td>
+              <td>{formatDateRangeFull(lpd.tgl_kegiatan, lpd.tgl_selesai)}</td>
             </tr>
             <tr>
               <td className="num">4.</td>
