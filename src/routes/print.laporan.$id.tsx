@@ -125,37 +125,20 @@ function PrintLaporanPage() {
           width: 130px;
           font-weight: bold;
         }
-        .lpd-sub {
-          margin: 0;
-          padding: 0;
+        .hk-table {
+          width: 100%;
+          border-collapse: collapse;
         }
-        .lpd-sub li {
-          list-style: none;
-          margin: 0;
-          padding: 0;
+        .hk-table td {
+          border: none;
+          padding: 1px 0;
+          vertical-align: top;
         }
-        .lpd-group {
-          font-weight: bold;
-          margin-top: 4px;
-          padding-left: 18px;
-        }
-        .lpd-row {
-          display: grid;
-          grid-template-columns: 22px 170px 10px 1fr;
-          column-gap: 4px;
-          padding-left: 18px;
-        }
-        .lpd-row-inline {
-          display: grid;
-          grid-template-columns: 196px 10px 1fr;
-          column-gap: 4px;
-          padding-left: 18px;
-          font-weight: bold;
-          margin-top: 4px;
-        }
-        .lpd-row-inline > div:last-child {
-          font-weight: normal;
-        }
+        .hk-table td.hk-letter { width: 22px; font-weight: bold; }
+        .hk-table td.hk-num    { width: 22px; text-align: left; }
+        .hk-table td.hk-label  { width: 170px; }
+        .hk-table td.hk-colon  { width: 10px; }
+        .hk-table td.hk-group  { font-weight: bold; }
         .lpd-foto {
           max-width: 100%;
           max-height: 9cm;
