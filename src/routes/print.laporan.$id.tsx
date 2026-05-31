@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getLpdDetail } from "@/lib/lpd.functions";
-import { formatDate, formatDateRange, formatNip } from "@/lib/format";
+import { formatDate, formatDateRangeFull, formatNip } from "@/lib/format";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -90,7 +90,7 @@ function PrintLaporanPage() {
         }
         .lpd-page {
           font-family: Arial, sans-serif;
-          font-size: 11pt;
+          font-size: 10pt;
           line-height: 1.3;
           color: #000;
           background: white;
@@ -99,7 +99,7 @@ function PrintLaporanPage() {
           padding: 1cm 1.8cm;
         }
         .lpd-page h1 {
-          font-size: 14pt;
+          font-size: 13pt;
           font-weight: bold;
           text-decoration: underline;
           text-align: center;
@@ -122,7 +122,7 @@ function PrintLaporanPage() {
           font-weight: bold;
         }
         .lpd-table td.label {
-          width: 160px;
+          width: 130px;
           font-weight: bold;
         }
         .lpd-sub {
@@ -143,6 +143,17 @@ function PrintLaporanPage() {
           grid-template-columns: 22px 170px 10px 1fr;
           column-gap: 4px;
           padding-left: 18px;
+        }
+        .lpd-row-inline {
+          display: grid;
+          grid-template-columns: 192px 10px 1fr;
+          column-gap: 4px;
+          padding-left: 18px;
+          font-weight: bold;
+          margin-top: 4px;
+        }
+        .lpd-row-inline > div:last-child {
+          font-weight: normal;
         }
         .lpd-foto {
           max-width: 100%;
@@ -196,7 +207,7 @@ function PrintLaporanPage() {
             <tr>
               <td className="num">3.</td>
               <td className="label">Tanggal Pelaksanaan</td>
-              <td>{formatDateRange(lpd.tgl_kegiatan, lpd.tgl_selesai)}</td>
+              <td>{formatDateRangeFull(lpd.tgl_kegiatan, lpd.tgl_selesai)}</td>
             </tr>
             <tr>
               <td className="num">4.</td>
@@ -215,11 +226,17 @@ function PrintLaporanPage() {
                 <DetailRow no="3" label="Tempat Pelaksanaan" value={lpd.master_tempat?.nama_tempat ?? "—"} />
                 <DetailRow no="4" label="Hambatan" value={lpd.proses_hambatan ?? "—"} />
 
-                <div className="lpd-group">C. OUTPUT</div>
-                <DetailRow no="" label="" value={lpd.output ?? "—"} />
+                <div className="lpd-row-inline">
+                  <div>C. OUTPUT</div>
+                  <div>:</div>
+                  <div style={{ whiteSpace: "pre-line" }}>{lpd.output ?? "—"}</div>
+                </div>
 
-                <div className="lpd-group">D. TINDAK LANJUT</div>
-                <DetailRow no="" label="" value={lpd.tindak_lanjut ?? "—"} />
+                <div className="lpd-row-inline">
+                  <div>D. TINDAK LANJUT</div>
+                  <div>:</div>
+                  <div style={{ whiteSpace: "pre-line" }}>{lpd.tindak_lanjut ?? "—"}</div>
+                </div>
               </td>
             </tr>
             <tr>
