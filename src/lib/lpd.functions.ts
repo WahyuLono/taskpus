@@ -119,13 +119,20 @@ export const submitLaporan = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: lpd, error: fetchErr } = await supabase
       .from("transaksi_lpd")
-      .select("id_lpd, status_lpd")
+      .select("id_lpd, status_lpd, approval_status")
       .eq("id_lpd", data.id)
       .maybeSingle();
     if (fetchErr) throw new Error(fetchErr.message);
     if (!lpd) throw new Error("LPD tidak ditemukan");
-    if (lpd.status_lpd !== "Belum")
-      throw new Error("Laporan sudah dikirim atau LPD dibatalkan");
+    if (lpd.status_lpd === "Batal") throw new Error("LPD telah dibatalkan");
+    if (
+      lpd.approval_status === "Menunggu" ||
+      lpd.approval_status === "Disetujui"
+    ) {
+      throw new Error(
+        "Laporan sedang menunggu persetujuan atau sudah disetujui — tidak dapat diubah.",
+      );
+    }
 
     const { error: updErr } = await supabase
       .from("transaksi_lpd")
@@ -143,6 +150,42 @@ export const submitLaporan = createServerFn({ method: "POST" })
       })
       .eq("id_lpd", data.id);
     if (updErr) throw new Error(updErr.message);
+
+    const { data: nextStatus, error: rpcErr } = await supabase.rpc(
+      "submit_laporan_for_approval",
+      { p_id_lpd: data.id },
+    );
+    if (rpcErr) throw new Error(rpcErr.message);
+    return { ok: true, approval_status: nextStatus as string };
+  });
+
+export const approveLpd = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("approve_lpd", {
+      p_id_lpd: data.id,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const rejectLpd = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        catatan: z.string().trim().min(3).max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("reject_lpd", {
+      p_id_lpd: data.id,
+      p_catatan: data.catatan,
+    });
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 

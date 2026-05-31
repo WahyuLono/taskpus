@@ -3,12 +3,25 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { getLpdDetail, submitLaporan } from "@/lib/lpd.functions";
+import {
+  getLpdDetail,
+  submitLaporan,
+  approveLpd,
+  rejectLpd,
+} from "@/lib/lpd.functions";
 import { StatusBadge } from "@/components/lpd/status-badge";
 import { formatDate, formatDateRange, formatNip } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
@@ -87,6 +100,14 @@ function LpdDetailPage() {
   if (!q.data) return null;
 
   const { lpd, petugas } = q.data as { lpd: any; petugas: any[] };
+  const isPetugasOfThisLpd =
+    !!me && petugas.some((p) => p.id_user === me.id_user);
+  const approval = lpd.approval_status as
+    | "Draft"
+    | "Menunggu"
+    | "Disetujui"
+    | "Ditolak"
+    | undefined;
 
   return (
     <div className="space-y-5">
@@ -110,18 +131,45 @@ function LpdDetailPage() {
             </span>
           </div>
         </div>
-        {isAdmin && (
-          <a
-            href={`/print/lpd/${id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
-          >
-            <span className="material-symbols-outlined !text-[20px]">print</span>
-            Cetak Surat Tugas (ST)
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && (
+            <a
+              href={`/print/lpd/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
+            >
+              <span className="material-symbols-outlined !text-[20px]">print</span>
+              Cetak Surat Tugas (ST)
+            </a>
+          )}
+          {!isAdmin && isPetugasOfThisLpd && approval === "Disetujui" && (
+            <a
+              href={`/print/laporan/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-card"
+            >
+              <span className="material-symbols-outlined !text-[20px]">print</span>
+              Cetak LPD
+            </a>
+          )}
+        </div>
       </div>
+
+      {/* Approval Banner */}
+      <ApprovalBanner
+        approval={approval}
+        catatanReject={lpd.catatan_reject}
+        approvedAt={lpd.approved_at}
+        isAdmin={isAdmin}
+        isPetugas={isPetugasOfThisLpd}
+      />
+
+      {/* Admin Review Panel */}
+      {isAdmin && approval === "Menunggu" && (
+        <AdminReviewPanel id={id} />
+      )}
 
       {/* Info Perjalanan */}
       <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
@@ -169,6 +217,171 @@ function LpdDetailPage() {
 
       {/* Laporan Hasil */}
       <LaporanSection lpd={lpd} id={id} petugasCount={petugas.length} />
+    </div>
+  );
+}
+
+function ApprovalBanner({
+  approval,
+  catatanReject,
+  approvedAt,
+  isAdmin,
+  isPetugas,
+}: {
+  approval?: "Draft" | "Menunggu" | "Disetujui" | "Ditolak";
+  catatanReject?: string | null;
+  approvedAt?: string | null;
+  isAdmin: boolean;
+  isPetugas: boolean;
+}) {
+  if (!approval || approval === "Draft") return null;
+
+  const styles: Record<string, string> = {
+    Menunggu: "bg-amber-50 border-amber-200 text-amber-900",
+    Disetujui: "bg-emerald-50 border-emerald-200 text-emerald-900",
+    Ditolak: "bg-red-50 border-red-200 text-red-900",
+  };
+  const icons: Record<string, string> = {
+    Menunggu: "hourglass_top",
+    Disetujui: "verified",
+    Ditolak: "block",
+  };
+  const titles: Record<string, string> = {
+    Menunggu: "Menunggu persetujuan Admin",
+    Disetujui: "Laporan telah disetujui",
+    Ditolak: "Laporan ditolak — revisi diperlukan",
+  };
+  const descs: Record<string, string> = {
+    Menunggu: isAdmin
+      ? "Silakan review laporan dan pilih Setujui atau Tolak."
+      : "Laporan Anda telah dikirim. Anda belum dapat mengubah isian sampai Admin menyelesaikan review.",
+    Disetujui: approvedAt
+      ? `Disetujui pada ${formatDate(approvedAt, true)}.${isPetugas ? " Anda dapat mencetak LPD." : ""}`
+      : "Laporan telah disetujui.",
+    Ditolak:
+      "Silakan perbaiki isian laporan sesuai catatan di bawah, lalu simpan kembali untuk dikirim ulang ke Admin.",
+  };
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border px-5 py-4 flex items-start gap-3",
+        styles[approval],
+      )}
+    >
+      <span className="material-symbols-outlined !text-[24px] mt-0.5">
+        {icons[approval]}
+      </span>
+      <div className="flex-1">
+        <p className="font-semibold">{titles[approval]}</p>
+        <p className="text-sm mt-1 opacity-90">{descs[approval]}</p>
+        {approval === "Ditolak" && catatanReject && (
+          <div className="mt-3 bg-white/70 border border-red-200 rounded-md p-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-red-700 mb-1">
+              Catatan Admin
+            </p>
+            <p className="whitespace-pre-line text-red-900">{catatanReject}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminReviewPanel({ id }: { id: string }) {
+  const qc = useQueryClient();
+  const approveFn = useServerFn(approveLpd);
+  const rejectFn = useServerFn(rejectLpd);
+  const [open, setOpen] = useState(false);
+  const [catatan, setCatatan] = useState("");
+
+  const approveMut = useMutation({
+    mutationFn: () => approveFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Laporan disetujui");
+      qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
+      qc.invalidateQueries({ queryKey: ["lpd-list"] });
+    },
+    onError: (e: Error) => toast.error("Gagal menyetujui", { description: e.message }),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: () => rejectFn({ data: { id, catatan: catatan.trim() } }),
+    onSuccess: () => {
+      toast.success("Laporan ditolak", { description: "Petugas dapat melakukan revisi." });
+      setOpen(false);
+      setCatatan("");
+      qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
+      qc.invalidateQueries({ queryKey: ["lpd-list"] });
+    },
+    onError: (e: Error) => toast.error("Gagal menolak", { description: e.message }),
+  });
+
+  return (
+    <div className="bg-card rounded-xl border border-outline-variant shadow-card p-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p className="font-semibold text-on-surface">Review laporan</p>
+        <p className="text-sm text-on-surface-variant mt-0.5">
+          Periksa isian A–D dan dokumentasi sebelum memutuskan.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setOpen(true)}
+          disabled={approveMut.isPending}
+          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          <span className="material-symbols-outlined !text-[18px]">close</span>
+          Tolak
+        </Button>
+        <Button
+          onClick={() => approveMut.mutate()}
+          disabled={approveMut.isPending || rejectMut.isPending}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+        >
+          <span className="material-symbols-outlined !text-[18px]">check</span>
+          {approveMut.isPending ? "Menyetujui…" : "Setujui"}
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={(v) => !rejectMut.isPending && setOpen(v)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tolak laporan</DialogTitle>
+            <DialogDescription>
+              Tuliskan alasan penolakan. Catatan ini akan dilihat oleh petugas saat
+              merevisi laporan.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            rows={4}
+            maxLength={500}
+            placeholder="Contoh: Bagian Hambatan belum spesifik, mohon dijelaskan lebih detail…"
+          />
+          <div className="text-xs text-on-surface-variant text-right tabular-nums">
+            {catatan.trim().length} / 500 (minimal 3)
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={rejectMut.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectMut.mutate()}
+              disabled={rejectMut.isPending || catatan.trim().length < 3}
+            >
+              {rejectMut.isPending ? "Menolak…" : "Tolak laporan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -295,9 +508,11 @@ function LaporanSection({
       </section>
     );
   }
-  if (lpd.status_lpd === "Sudah") {
+  // Lock the form once it's awaiting review or approved
+  if (lpd.approval_status === "Menunggu" || lpd.approval_status === "Disetujui") {
     return <LaporanReadonly lpd={lpd} petugasCount={petugasCount} />;
   }
+  // Draft (new) or Ditolak (revision) → editable form, pre-filled if data exists
   return <LaporanFormView id={id} lpd={lpd} petugasCount={petugasCount} />;
 }
 
@@ -487,10 +702,29 @@ function LaporanFormView({
   const { data: me } = useCurrentUser();
   const submit = useServerFn(submitLaporan);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState<LaporanForm>(EMPTY_LAPORAN);
+  const initial = readLaporan(lpd) ?? EMPTY_LAPORAN;
+  const [form, setForm] = useState<LaporanForm>(initial);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const hasExistingFoto = !!lpd.url_foto;
+  const isRevision = lpd.approval_status === "Ditolak";
+
+  // Load existing foto preview (signed URL) for revisions
+  useEffect(() => {
+    if (!hasExistingFoto || preview) return;
+    let cancel = false;
+    supabase.storage
+      .from("laporan_lpd")
+      .createSignedUrl(lpd.url_foto, 3600)
+      .then(({ data }) => {
+        if (!cancel && data?.signedUrl) setPreview(data.signedUrl);
+      });
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lpd.url_foto]);
 
   const jadwal = formatDate(lpd.tgl_kegiatan);
   const tempat = lpd.master_tempat?.nama_tempat ?? "—";
@@ -501,7 +735,7 @@ function LaporanFormView({
   const allFilled = (Object.keys(EMPTY_LAPORAN) as (keyof LaporanForm)[]).every(
     (k) => form[k].trim().length >= 1,
   );
-  const canSubmit = allFilled && !!file;
+  const canSubmit = allFilled && (!!file || hasExistingFoto);
 
   const handleFile = (f: File | null) => {
     if (!f) {
@@ -523,18 +757,20 @@ function LaporanFormView({
 
   const mut = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Foto belum dipilih");
-      const tahun = new Date(lpd.tgl_buat).getFullYear();
-      const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}.${ext}`;
+      let path = lpd.url_foto as string | null;
+      if (file) {
+        const tahun = new Date(lpd.tgl_buat).getFullYear();
+        const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}.${ext}`;
 
-      const { error: upErr } = await supabase.storage
-        .from("laporan_lpd")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
+        const { error: upErr } = await supabase.storage
+          .from("laporan_lpd")
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
+      }
+      if (!path) throw new Error("Foto belum dipilih");
 
-      // Submit structured laporan per-field
       await submit({
         data: {
           id,
@@ -553,7 +789,7 @@ function LaporanFormView({
     },
     onSuccess: () => {
       toast.success("Laporan tersimpan", {
-        description: "LPD ditandai selesai.",
+        description: "Menunggu persetujuan Admin.",
       });
       qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
       qc.invalidateQueries({ queryKey: ["lpd-list"] });
@@ -568,11 +804,12 @@ function LaporanFormView({
     <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-6">
       <div>
         <h2 className="font-semibold text-on-surface">
-          Laporan Hasil Pelaksanaan Tugas
+          {isRevision ? "Revisi Laporan" : "Laporan Hasil Pelaksanaan Tugas"}
         </h2>
         <p className="text-xs text-on-surface-variant mt-1">
           Lengkapi seluruh isian laporan dan unggah satu foto dokumentasi. Setelah
-          disimpan, status LPD berubah menjadi <strong>Sudah</strong>.
+          disimpan, laporan akan dikirim ke Admin untuk persetujuan.
+
         </p>
       </div>
 
@@ -729,7 +966,11 @@ function LaporanFormView({
         onClick={() => mut.mutate()}
         className="h-11 px-6"
       >
-        {mut.isPending ? "Menyimpan…" : "Simpan & Tandai Selesai"}
+        {mut.isPending
+          ? "Menyimpan…"
+          : isRevision
+            ? "Simpan Revisi & Kirim Ulang"
+            : "Simpan & Kirim untuk Persetujuan"}
       </Button>
     </section>
   );
