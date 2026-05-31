@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -101,6 +102,13 @@ function Page() {
         : allRows.filter((r) => r.tahun === yearFilter),
     [allRows, yearFilter],
   );
+
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  useEffect(() => setPage(1), [yearFilter]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const currentYearActive = allRows.filter(
     (r) => r.tahun === currentYear && r.status === "Active",
