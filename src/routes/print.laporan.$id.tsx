@@ -137,6 +137,7 @@ function PrintLaporanPage() {
         .lpd-group {
           font-weight: bold;
           margin-top: 4px;
+          padding-left: 18px;
         }
         .lpd-row {
           display: grid;
@@ -146,7 +147,7 @@ function PrintLaporanPage() {
         }
         .lpd-row-inline {
           display: grid;
-          grid-template-columns: 192px 10px 1fr;
+          grid-template-columns: 196px 10px 1fr;
           column-gap: 4px;
           padding-left: 18px;
           font-weight: bold;
