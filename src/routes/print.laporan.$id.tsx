@@ -276,7 +276,7 @@ function PrintLaporanPage() {
   );
 }
 
-function DetailRow({
+function HkRow({
   no,
   label,
   value,
@@ -286,11 +286,12 @@ function DetailRow({
   value: string;
 }) {
   return (
-    <div className="lpd-row">
-      <div>{no ? `${no}.` : ""}</div>
-      <div>{label}</div>
-      <div>{label ? ":" : ""}</div>
-      <div style={{ whiteSpace: "pre-line" }}>{value}</div>
-    </div>
+    <tr>
+      <td />
+      <td className="hk-num">{no}.</td>
+      <td className="hk-label">{label}</td>
+      <td className="hk-colon">:</td>
+      <td style={{ whiteSpace: "pre-line" }}>{value}</td>
+    </tr>
   );
 }
