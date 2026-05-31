@@ -1,21 +1,27 @@
-## Samakan UI Petugas Ditugaskan di Edit SPT
+# Rebrand: Logo + Teks "UPTD Puskesmas Kumai"
 
-Saat ini `src/routes/_authenticated/lpd.$id_.edit.tsx` masih menampilkan daftar semua pegawai pada section "Petugas Ditugaskan". Terapkan pola search-then-pick yang sama dengan halaman Buat SPT.
+## Aset Logo
+- Copy `user-uploads://LOGO_2-removebg-preview.png` → `src/assets/logo-puskesmas.png`.
+- Import sebagai ES module di komponen yang memakainya (login + sidebar).
 
-### Perubahan (frontend only, satu file: `src/routes/_authenticated/lpd.$id_.edit.tsx`)
+## Perubahan Teks & Logo
 
-1. Ganti `filteredPetugas` (useMemo) menjadi:
-   - `petugasAll`, `selectedPetugas` (yang sudah dipilih), dan `filteredPetugas` yang hanya berisi hasil pencarian saat `petugasSearch.trim()` terisi, dan **mengecualikan** petugas yang sudah dipilih.
+### 1. Halaman Login — `src/routes/login.tsx`
+- Ganti ikon `material-symbols-outlined "apartment"` (di dalam kotak biru bulat) dengan `<img src={logo} alt="UPTD Puskesmas Kumai" />`.
+- Hapus background biru bulat karena logo sudah punya identitas warna sendiri; cukup tampilkan logo ±80–96px di tengah.
+- Judul `TASKPUS` tetap.
+- Subjudul: `Manajemen Laporan Perjalanan Dinas` → `UPTD Puskesmas Kumai`.
 
-2. Render section "Petugas Ditugaskan":
-   - Chip petugas terpilih di atas (nama + tombol ✕ untuk hapus).
-   - Jika belum ada, tampilkan "Belum ada petugas dipilih."
-   - Input pencarian (placeholder "Cari nama atau NIP…").
-   - Daftar hasil hanya muncul saat ada teks pencarian; baris pakai layout sama (checkbox, nama, NIP • jabatan, badge status_kepegawaian).
-   - Saat dicentang → `togglePetugas` lalu `setPetugasSearch("")` agar daftar tertutup.
-   - Jika kosong → "Tidak ada pegawai cocok."
-   - Tanpa pencarian → hint kecil "Ketik nama atau NIP untuk mencari petugas."
+### 2. Sidebar (admin & petugas) — `src/routes/_authenticated.tsx`
+- Ganti ikon `apartment` di header sidebar dengan `<img>` logo Puskesmas (tetap ukuran kotak ±32–36px, tanpa background biru).
+- Baris judul `TASKPUS` tetap.
+- Baris kedua: `Manajemen LPD` → `UPTD Puskesmas Kumai`.
+- Sidebar dipakai bersama untuk role admin & petugas (file ini adalah layout `_authenticated`), jadi otomatis konsisten di kedua role.
 
-### Yang tidak berubah
-- Inisialisasi `petugasIds` dari `assigned` (petugas existing tetap auto-terpilih dan muncul sebagai chip).
-- Server functions, validasi, submit, ringkasan.
+## Yang TIDAK diubah
+- Metadata `__root.tsx` (title/description SEO "TASKPUS …") — di luar permintaan user.
+- Logika auth, routing, dan komponen lain.
+
+## Catatan teknis
+- File logo masuk ke `src/assets/` agar di-bundle Vite, bukan `public/`.
+- Tidak perlu migrasi DB atau perubahan backend.
