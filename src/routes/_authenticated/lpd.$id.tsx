@@ -702,10 +702,29 @@ function LaporanFormView({
   const { data: me } = useCurrentUser();
   const submit = useServerFn(submitLaporan);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState<LaporanForm>(EMPTY_LAPORAN);
+  const initial = readLaporan(lpd) ?? EMPTY_LAPORAN;
+  const [form, setForm] = useState<LaporanForm>(initial);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const hasExistingFoto = !!lpd.url_foto;
+  const isRevision = lpd.approval_status === "Ditolak";
+
+  // Load existing foto preview (signed URL) for revisions
+  useEffect(() => {
+    if (!hasExistingFoto || preview) return;
+    let cancel = false;
+    supabase.storage
+      .from("laporan_lpd")
+      .createSignedUrl(lpd.url_foto, 3600)
+      .then(({ data }) => {
+        if (!cancel && data?.signedUrl) setPreview(data.signedUrl);
+      });
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lpd.url_foto]);
 
   const jadwal = formatDate(lpd.tgl_kegiatan);
   const tempat = lpd.master_tempat?.nama_tempat ?? "—";
@@ -716,7 +735,7 @@ function LaporanFormView({
   const allFilled = (Object.keys(EMPTY_LAPORAN) as (keyof LaporanForm)[]).every(
     (k) => form[k].trim().length >= 1,
   );
-  const canSubmit = allFilled && !!file;
+  const canSubmit = allFilled && (!!file || hasExistingFoto);
 
   const handleFile = (f: File | null) => {
     if (!f) {
@@ -738,18 +757,20 @@ function LaporanFormView({
 
   const mut = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Foto belum dipilih");
-      const tahun = new Date(lpd.tgl_buat).getFullYear();
-      const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}.${ext}`;
+      let path = lpd.url_foto as string | null;
+      if (file) {
+        const tahun = new Date(lpd.tgl_buat).getFullYear();
+        const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}.${ext}`;
 
-      const { error: upErr } = await supabase.storage
-        .from("laporan_lpd")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
+        const { error: upErr } = await supabase.storage
+          .from("laporan_lpd")
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
+      }
+      if (!path) throw new Error("Foto belum dipilih");
 
-      // Submit structured laporan per-field
       await submit({
         data: {
           id,
@@ -768,7 +789,7 @@ function LaporanFormView({
     },
     onSuccess: () => {
       toast.success("Laporan tersimpan", {
-        description: "LPD ditandai selesai.",
+        description: "Menunggu persetujuan Admin.",
       });
       qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
       qc.invalidateQueries({ queryKey: ["lpd-list"] });
@@ -783,11 +804,12 @@ function LaporanFormView({
     <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-6">
       <div>
         <h2 className="font-semibold text-on-surface">
-          Laporan Hasil Pelaksanaan Tugas
+          {isRevision ? "Revisi Laporan" : "Laporan Hasil Pelaksanaan Tugas"}
         </h2>
         <p className="text-xs text-on-surface-variant mt-1">
           Lengkapi seluruh isian laporan dan unggah satu foto dokumentasi. Setelah
-          disimpan, status LPD berubah menjadi <strong>Sudah</strong>.
+          disimpan, laporan akan dikirim ke Admin untuk persetujuan.
+
         </p>
       </div>
 
