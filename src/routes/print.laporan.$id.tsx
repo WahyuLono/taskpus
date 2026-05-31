@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getLpdDetail } from "@/lib/lpd.functions";
-import { formatDate, formatDateRange, formatNip } from "@/lib/format";
+import { formatDate, formatDateRangeFull, formatNip } from "@/lib/format";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 
