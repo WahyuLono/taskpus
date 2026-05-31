@@ -226,11 +226,17 @@ function PrintLaporanPage() {
                 <DetailRow no="3" label="Tempat Pelaksanaan" value={lpd.master_tempat?.nama_tempat ?? "—"} />
                 <DetailRow no="4" label="Hambatan" value={lpd.proses_hambatan ?? "—"} />
 
-                <div className="lpd-group">C. OUTPUT</div>
-                <DetailRow no="" label="" value={lpd.output ?? "—"} />
+                <div className="lpd-row-inline">
+                  <div>C. OUTPUT</div>
+                  <div>:</div>
+                  <div style={{ whiteSpace: "pre-line" }}>{lpd.output ?? "—"}</div>
+                </div>
 
-                <div className="lpd-group">D. TINDAK LANJUT</div>
-                <DetailRow no="" label="" value={lpd.tindak_lanjut ?? "—"} />
+                <div className="lpd-row-inline">
+                  <div>D. TINDAK LANJUT</div>
+                  <div>:</div>
+                  <div style={{ whiteSpace: "pre-line" }}>{lpd.tindak_lanjut ?? "—"}</div>
+                </div>
               </td>
             </tr>
             <tr>
