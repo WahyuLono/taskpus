@@ -232,30 +232,50 @@ function BuatSPTPage() {
           title="Petugas Ditugaskan"
           subtitle={`Dipilih: ${petugasIds.length} orang`}
         >
+          {selectedPetugas.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {selectedPetugas.map((p: any) => (
+                <span
+                  key={p.id_user}
+                  className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                >
+                  {p.nama}
+                  <button
+                    type="button"
+                    onClick={() => togglePetugas(p.id_user)}
+                    className="grid place-content-center h-5 w-5 rounded-full hover:bg-primary/20"
+                    aria-label={`Hapus ${p.nama}`}
+                  >
+                    <span className="material-symbols-outlined !text-[14px]">close</span>
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mb-3 text-xs text-on-surface-variant">Belum ada petugas dipilih.</p>
+          )}
           <Input
             value={petugasSearch}
             onChange={(e) => setPetugasSearch(e.target.value)}
             placeholder="Cari nama atau NIP…"
-            className="mb-3"
           />
-          <div className="max-h-72 overflow-y-auto divide-y divide-outline-variant border border-outline-variant rounded-md">
-            {filteredPetugas.length === 0 && (
-              <p className="p-4 text-sm text-on-surface-variant">Tidak ada pegawai.</p>
-            )}
-            {filteredPetugas.map((p: any) => {
-              const checked = petugasIds.includes(p.id_user);
-              return (
+          {searchTrim ? (
+            <div className="mt-3 max-h-72 overflow-y-auto divide-y divide-outline-variant border border-outline-variant rounded-md">
+              {filteredPetugas.length === 0 && (
+                <p className="p-4 text-sm text-on-surface-variant">Tidak ada pegawai cocok.</p>
+              )}
+              {filteredPetugas.map((p: any) => (
                 <label
                   key={p.id_user}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-primary/5",
-                    checked && "bg-primary/5",
-                  )}
+                  className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-primary/5"
                 >
                   <input
                     type="checkbox"
-                    checked={checked}
-                    onChange={() => togglePetugas(p.id_user)}
+                    checked={false}
+                    onChange={() => {
+                      togglePetugas(p.id_user);
+                      setPetugasSearch("");
+                    }}
                     className="h-4 w-4 accent-primary"
                   />
                   <div className="flex-1">
@@ -268,9 +288,13 @@ function BuatSPTPage() {
                     {p.status_kepegawaian}
                   </span>
                 </label>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-on-surface-variant">
+              Ketik nama atau NIP untuk mencari petugas.
+            </p>
+          )}
         </Section>
       </div>
 
