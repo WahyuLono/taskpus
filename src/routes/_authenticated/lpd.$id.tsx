@@ -134,7 +134,7 @@ function LpdDetailPage() {
         <div className="flex flex-wrap items-center gap-2">
           {isAdmin && (
             <>
-              {approval !== "Menunggu" && approval !== "Disetujui" && (
+              {lpd.status_lpd === "Belum" && approval === "Draft" && (
                 <Link
                   to="/lpd/$id/edit"
                   params={{ id }}
