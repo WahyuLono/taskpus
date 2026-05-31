@@ -99,7 +99,7 @@ function PrintLaporanPage() {
           padding: 1cm 1.8cm;
         }
         .lpd-page h1 {
-          font-size: 14pt;
+          font-size: 13pt;
           font-weight: bold;
           text-decoration: underline;
           text-align: center;
