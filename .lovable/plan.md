@@ -1,72 +1,31 @@
-## Diagnosis
+## Tujuan
+Membersihkan sisa testing nomor surat agar SPT berikutnya dimulai dari `090/01404/P.KI.2026`.
 
-Klik "Edit SPT" memang tidak melakukan apa-apa — bukan karena `status_lpd`, tapi karena **konflik nested route**.
+## Temuan di backend
+- `nomor_surat_allocation` id=2 → `range_start=1404`, `last_used_number=1405`, status Active.
+- `transaksi_lpd` punya 1 baris hasil testing: `090/01405/P.KI.2026` (id_lpd `f486bde4-fedc-4c6e-871f-6899b71d0e62`, dibuat 2026-05-31 19:17).
+- Tidak ada baris dengan nomor "140" / "1404" — yang itu sudah pernah dihapus manual.
+- Counter `last_used_number` adalah biang masalahnya: ia maju ke 1405 walau row 140 lama sudah dihapus, sehingga generator memberikan 1405 bukan 1404.
 
-File `src/routes/_authenticated/lpd.$id.edit.tsx` (dot-notation) menjadi **child route** dari `lpd.$id.tsx`. Agar child bisa tampil, parent (`lpd.$id.tsx`) harus me-render `<Outlet />`. Saat ini parent tidak punya `<Outlet />` → URL berubah ke `/lpd/<id>/edit`, tapi yang ter-render tetap halaman detail. Visual: "tidak terjadi apa-apa".
+## Rencana pembersihan (data-only, lewat insert tool)
+Satu transaksi berisi:
 
-Analogi Anda soal `status_lpd` + `approval_status` benar dan akan kita pakai sebagai aturan baku untuk eligibility edit — tapi itu masalah terpisah dari bug klik di atas. Dua-duanya saya selesaikan dalam plan ini.
+1. `DELETE FROM public.detail_petugas WHERE id_lpd = 'f486bde4-fedc-4c6e-871f-6899b71d0e62';`
+2. `DELETE FROM public.transaksi_lpd WHERE id_lpd = 'f486bde4-fedc-4c6e-871f-6899b71d0e62';`
+3. `UPDATE public.nomor_surat_allocation SET last_used_number = 1403, updated_at = now() WHERE id_allocation = 2;`
 
-## Perubahan
-
-### 1. Fix routing — pisahkan edit dari parent detail
-
-Rename file route dengan trailing underscore agar tidak nested di bawah `lpd.$id`:
-
-- `src/routes/_authenticated/lpd.$id.edit.tsx` → `src/routes/_authenticated/lpd.$id_.edit.tsx`
-
-Dalam TanStack Router, trailing `_` ("escape") menghasilkan path yang sama (`/lpd/$id/edit`) tapi route tidak nested di bawah `lpd.$id`. `routeTree.gen.ts` akan otomatis di-regenerate. Tidak perlu sentuh `lpd.$id.tsx`.
-
-Update `createFileRoute` di file edit jadi `"/_authenticated/lpd/$id_/edit"`.
-
-### 2. Aturan baru "boleh edit SPT" — pakai analogi Anda
-
-Hanya bisa edit jika **`status_lpd = 'Belum'` DAN `approval_status = 'Draft'`**. Selain itu tombol disembunyikan dan RPC menolak.
-
-Alasan: ini mencakup kasus admin baru saja membuat SPT dan belum ada aktivitas dari petugas. Begitu petugas mulai (status_lpd berubah jadi `Sudah`, atau approval naik ke `Menunggu`/`Disetujui`/`Ditolak`), edit langsung terkunci. Konsisten di tiga lapis: UI, halaman edit, RPC.
-
-**a. UI tombol di `src/routes/_authenticated/lpd.$id.tsx`**
-
-Ganti kondisi tampil tombol "Edit SPT":
-
-```tsx
-const canEditSpt =
-  isAdmin && lpd.status_lpd === "Belum" && lpd.approval_status === "Draft";
-// ...
-{canEditSpt && (
-  <Link to="/lpd/$id/edit" params={{ id }} ...>Edit SPT</Link>
-)}
+Kenapa `1403`, bukan `1404`? RPC `create_lpd_baru` memakai aturan:
+```text
+IF last_used_number < range_start THEN v_nomor := range_start
+ELSE v_nomor := last_used_number + 1
 ```
+Jadi dengan `last_used_number=1403` (< 1404), generator berikutnya akan menghasilkan tepat `1404` → `090/01404/P.KI.2026`.
 
-**b. Halaman edit `lpd.$id_.edit.tsx`**
+## Verifikasi setelah eksekusi
+- `SELECT * FROM nomor_surat_allocation WHERE id_allocation = 2;` → `last_used_number = 1403`.
+- `SELECT COUNT(*) FROM transaksi_lpd WHERE no_surat_slug = '090_01405_P.KI.2026';` → 0.
+- Admin buat SPT baru → nomor yang muncul harus `090/01404/P.KI.2026`.
 
-Ganti variabel `locked` jadi:
-
-```tsx
-const canEdit = lpd?.status_lpd === "Belum" && lpd?.approval_status === "Draft";
-```
-
-Lock screen baru menampilkan alasan dinamis: kalau `approval_status` selain `Draft` → "laporan sudah {approval}", kalau `status_lpd` selain `Belum` → "status surat sudah {status}".
-
-Sekalian benerin **hooks order bug** kecil: `useMemo(filteredPetugas, ...)` saat ini berada **setelah** early return (`if (detail.isLoading) return ...`). Pindahkan `useMemo` ke atas sebelum semua early return agar urutan hook konsisten antar render (mencegah crash "Rendered more hooks than during the previous render" yang juga bisa bikin halaman blank).
-
-**c. RPC `public.update_lpd_spt` (migration baru)**
-
-Ganti guard:
-
-```sql
-IF v_row.approval_status <> 'Draft'::public.approval_status_lpd
-   OR v_row.status_lpd <> 'Belum'::public.status_surat THEN
-  RAISE EXCEPTION 'SPT tidak bisa diedit. Syarat: status_lpd=Belum & approval_status=Draft (saat ini: %, %).',
-    v_row.status_lpd, v_row.approval_status;
-END IF;
-```
-
-Sisanya tetap (hanya update metadata, sync `detail_petugas`, tidak menyentuh `no_surat`/laporan).
-
-## File yang berubah
-
-- rename: `src/routes/_authenticated/lpd.$id.edit.tsx` → `lpd.$id_.edit.tsx` (path baru + tweak `createFileRoute` + ganti `locked`→`canEdit` + pindahkan `useMemo`)
-- edit: `src/routes/_authenticated/lpd.$id.tsx` (kondisi tombol pakai `status_lpd === 'Belum' && approval_status === 'Draft'`)
-- baru: `supabase/migrations/<ts>_update_lpd_spt_strict.sql` (CREATE OR REPLACE FUNCTION `update_lpd_spt` dengan guard baru)
-
-Tidak ada perubahan RLS, schema, atau server function TS (skema Zod tetap).
+## Catatan
+- Tidak ada perubahan skema, RPC, atau kode frontend. Murni cleanup data.
+- Tidak menyentuh allocation id=1 (range 1–3, Inactive) — biarkan apa adanya karena masih dipakai 3 SPT lama (00001–00003).
