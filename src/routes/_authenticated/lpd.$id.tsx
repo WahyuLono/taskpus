@@ -3,12 +3,25 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { getLpdDetail, submitLaporan } from "@/lib/lpd.functions";
+import {
+  getLpdDetail,
+  submitLaporan,
+  approveLpd,
+  rejectLpd,
+} from "@/lib/lpd.functions";
 import { StatusBadge } from "@/components/lpd/status-badge";
 import { formatDate, formatDateRange, formatNip } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
