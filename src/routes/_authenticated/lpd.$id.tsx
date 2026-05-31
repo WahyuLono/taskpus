@@ -966,7 +966,11 @@ function LaporanFormView({
         onClick={() => mut.mutate()}
         className="h-11 px-6"
       >
-        {mut.isPending ? "Menyimpan…" : "Simpan & Tandai Selesai"}
+        {mut.isPending
+          ? "Menyimpan…"
+          : isRevision
+            ? "Simpan Revisi & Kirim Ulang"
+            : "Simpan & Kirim untuk Persetujuan"}
       </Button>
     </section>
   );
