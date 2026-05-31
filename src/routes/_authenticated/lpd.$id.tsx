@@ -100,6 +100,14 @@ function LpdDetailPage() {
   if (!q.data) return null;
 
   const { lpd, petugas } = q.data as { lpd: any; petugas: any[] };
+  const isPetugasOfThisLpd =
+    !!me && petugas.some((p) => p.id_user === me.id_user);
+  const approval = lpd.approval_status as
+    | "Draft"
+    | "Menunggu"
+    | "Disetujui"
+    | "Ditolak"
+    | undefined;
 
   return (
     <div className="space-y-5">
@@ -123,18 +131,45 @@ function LpdDetailPage() {
             </span>
           </div>
         </div>
-        {isAdmin && (
-          <a
-            href={`/print/lpd/${id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
-          >
-            <span className="material-symbols-outlined !text-[20px]">print</span>
-            Cetak Surat Tugas (ST)
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && (
+            <a
+              href={`/print/lpd/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
+            >
+              <span className="material-symbols-outlined !text-[20px]">print</span>
+              Cetak Surat Tugas (ST)
+            </a>
+          )}
+          {!isAdmin && isPetugasOfThisLpd && approval === "Disetujui" && (
+            <a
+              href={`/print/laporan/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-card"
+            >
+              <span className="material-symbols-outlined !text-[20px]">print</span>
+              Cetak LPD
+            </a>
+          )}
+        </div>
       </div>
+
+      {/* Approval Banner */}
+      <ApprovalBanner
+        approval={approval}
+        catatanReject={lpd.catatan_reject}
+        approvedAt={lpd.approved_at}
+        isAdmin={isAdmin}
+        isPetugas={isPetugasOfThisLpd}
+      />
+
+      {/* Admin Review Panel */}
+      {isAdmin && approval === "Menunggu" && (
+        <AdminReviewPanel id={id} />
+      )}
 
       {/* Info Perjalanan */}
       <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6">
@@ -182,6 +217,171 @@ function LpdDetailPage() {
 
       {/* Laporan Hasil */}
       <LaporanSection lpd={lpd} id={id} petugasCount={petugas.length} />
+    </div>
+  );
+}
+
+function ApprovalBanner({
+  approval,
+  catatanReject,
+  approvedAt,
+  isAdmin,
+  isPetugas,
+}: {
+  approval?: "Draft" | "Menunggu" | "Disetujui" | "Ditolak";
+  catatanReject?: string | null;
+  approvedAt?: string | null;
+  isAdmin: boolean;
+  isPetugas: boolean;
+}) {
+  if (!approval || approval === "Draft") return null;
+
+  const styles: Record<string, string> = {
+    Menunggu: "bg-amber-50 border-amber-200 text-amber-900",
+    Disetujui: "bg-emerald-50 border-emerald-200 text-emerald-900",
+    Ditolak: "bg-red-50 border-red-200 text-red-900",
+  };
+  const icons: Record<string, string> = {
+    Menunggu: "hourglass_top",
+    Disetujui: "verified",
+    Ditolak: "block",
+  };
+  const titles: Record<string, string> = {
+    Menunggu: "Menunggu persetujuan Admin",
+    Disetujui: "Laporan telah disetujui",
+    Ditolak: "Laporan ditolak — revisi diperlukan",
+  };
+  const descs: Record<string, string> = {
+    Menunggu: isAdmin
+      ? "Silakan review laporan dan pilih Setujui atau Tolak."
+      : "Laporan Anda telah dikirim. Anda belum dapat mengubah isian sampai Admin menyelesaikan review.",
+    Disetujui: approvedAt
+      ? `Disetujui pada ${formatDate(approvedAt, true)}.${isPetugas ? " Anda dapat mencetak LPD." : ""}`
+      : "Laporan telah disetujui.",
+    Ditolak:
+      "Silakan perbaiki isian laporan sesuai catatan di bawah, lalu simpan kembali untuk dikirim ulang ke Admin.",
+  };
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border px-5 py-4 flex items-start gap-3",
+        styles[approval],
+      )}
+    >
+      <span className="material-symbols-outlined !text-[24px] mt-0.5">
+        {icons[approval]}
+      </span>
+      <div className="flex-1">
+        <p className="font-semibold">{titles[approval]}</p>
+        <p className="text-sm mt-1 opacity-90">{descs[approval]}</p>
+        {approval === "Ditolak" && catatanReject && (
+          <div className="mt-3 bg-white/70 border border-red-200 rounded-md p-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-red-700 mb-1">
+              Catatan Admin
+            </p>
+            <p className="whitespace-pre-line text-red-900">{catatanReject}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminReviewPanel({ id }: { id: string }) {
+  const qc = useQueryClient();
+  const approveFn = useServerFn(approveLpd);
+  const rejectFn = useServerFn(rejectLpd);
+  const [open, setOpen] = useState(false);
+  const [catatan, setCatatan] = useState("");
+
+  const approveMut = useMutation({
+    mutationFn: () => approveFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Laporan disetujui");
+      qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
+      qc.invalidateQueries({ queryKey: ["lpd-list"] });
+    },
+    onError: (e: Error) => toast.error("Gagal menyetujui", { description: e.message }),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: () => rejectFn({ data: { id, catatan: catatan.trim() } }),
+    onSuccess: () => {
+      toast.success("Laporan ditolak", { description: "Petugas dapat melakukan revisi." });
+      setOpen(false);
+      setCatatan("");
+      qc.invalidateQueries({ queryKey: ["lpd-detail", id] });
+      qc.invalidateQueries({ queryKey: ["lpd-list"] });
+    },
+    onError: (e: Error) => toast.error("Gagal menolak", { description: e.message }),
+  });
+
+  return (
+    <div className="bg-card rounded-xl border border-outline-variant shadow-card p-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p className="font-semibold text-on-surface">Review laporan</p>
+        <p className="text-sm text-on-surface-variant mt-0.5">
+          Periksa isian A–D dan dokumentasi sebelum memutuskan.
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setOpen(true)}
+          disabled={approveMut.isPending}
+          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          <span className="material-symbols-outlined !text-[18px]">close</span>
+          Tolak
+        </Button>
+        <Button
+          onClick={() => approveMut.mutate()}
+          disabled={approveMut.isPending || rejectMut.isPending}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+        >
+          <span className="material-symbols-outlined !text-[18px]">check</span>
+          {approveMut.isPending ? "Menyetujui…" : "Setujui"}
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={(v) => !rejectMut.isPending && setOpen(v)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tolak laporan</DialogTitle>
+            <DialogDescription>
+              Tuliskan alasan penolakan. Catatan ini akan dilihat oleh petugas saat
+              merevisi laporan.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            rows={4}
+            maxLength={500}
+            placeholder="Contoh: Bagian Hambatan belum spesifik, mohon dijelaskan lebih detail…"
+          />
+          <div className="text-xs text-on-surface-variant text-right tabular-nums">
+            {catatan.trim().length} / 500 (minimal 3)
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={rejectMut.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectMut.mutate()}
+              disabled={rejectMut.isPending || catatan.trim().length < 3}
+            >
+              {rejectMut.isPending ? "Menolak…" : "Tolak laporan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
