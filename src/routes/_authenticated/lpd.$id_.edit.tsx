@@ -18,7 +18,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import { Section, Fld, Row, QuickSelect } from "./lpd.baru";
 
-export const Route = createFileRoute("/_authenticated/lpd/$id/edit")({
+export const Route = createFileRoute("/_authenticated/lpd/$id_/edit")({
   component: EditSPTPage,
 });
 
