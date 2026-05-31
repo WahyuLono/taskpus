@@ -262,7 +262,7 @@ function Page() {
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((r) => {
+              paginated.map((r) => {
                 const total = r.range_end - r.range_start + 1;
                 const used = Math.max(0, r.last_used_number - r.range_start + 1);
                 const sisa = Math.max(0, r.range_end - r.last_used_number);
@@ -316,6 +316,13 @@ function Page() {
             )}
           </TableBody>
         </Table>
+        <PaginationBar
+          page={safePage}
+          totalPages={totalPages}
+          total={rows.length}
+          pageSize={PAGE_SIZE}
+          onChange={setPage}
+        />
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
