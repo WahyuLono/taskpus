@@ -334,7 +334,7 @@ function Page() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((r) => (
+                paginated.map((r) => (
                   <TableRow key={r.id_user}>
                     <TableCell className="font-mono text-xs">
                       <div>{r.nip ?? "-"}</div>
@@ -400,6 +400,13 @@ function Page() {
             </TableBody>
           </Table>
         </div>
+        <PaginationBar
+          page={safePage}
+          totalPages={totalPages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onChange={setPage}
+        />
       </div>
 
       {/* Add / Edit dialog */}
