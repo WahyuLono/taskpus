@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import logoPuskesmas from "@/assets/logo-puskesmas.png";
 import {
   createFileRoute,
   Link,
@@ -72,12 +73,14 @@ function AuthLayout() {
         )}
       >
         <div className="h-[72px] flex items-center gap-3 px-6 border-b border-sidebar-border">
-          <div className="h-10 w-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
-            <span className="material-symbols-outlined !text-[22px]">apartment</span>
-          </div>
+          <img
+            src={logoPuskesmas}
+            alt="UPTD Puskesmas Kumai"
+            className="h-10 w-10 object-contain shrink-0"
+          />
           <div>
             <div className="font-bold text-sidebar-foreground tracking-tight">TASKPUS</div>
-            <div className="text-[11px] text-on-surface-variant -mt-0.5">Manajemen LPD</div>
+            <div className="text-[11px] text-on-surface-variant -mt-0.5">UPTD Puskesmas Kumai</div>
           </div>
         </div>
 

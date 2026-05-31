@@ -7,6 +7,7 @@ import { resolveLoginEmail } from "@/lib/auth.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import logoPuskesmas from "@/assets/logo-puskesmas.png";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
@@ -56,12 +57,14 @@ function LoginPage() {
     <div className="min-h-screen bg-surface-container-low flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-primary text-primary-foreground shadow-card">
-            <span className="material-symbols-outlined !text-[28px]">apartment</span>
-          </div>
+          <img
+            src={logoPuskesmas}
+            alt="UPTD Puskesmas Kumai"
+            className="mx-auto h-24 w-24 object-contain"
+          />
           <h1 className="mt-4 text-2xl font-bold text-on-surface">TASKPUS</h1>
           <p className="text-sm text-on-surface-variant mt-1">
-            Manajemen Laporan Perjalanan Dinas
+            UPTD Puskesmas Kumai
           </p>
         </div>
 
