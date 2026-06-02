@@ -260,42 +260,45 @@ function PrintSptPage() {
           </tbody>
         </table>
 
-        {/* Footer Date (Dikeluarkan) - Placed ABOVE the signatures */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10, pageBreakInside: "avoid" }}>
-          <table style={{ width: 300, marginBottom: 8 }}>
-            <tbody>
-              <tr>
-                <td style={{ width: 110, whiteSpace: "nowrap" }}>Dikeluarkan</td>
-                <td>:</td>
-                <td>Kumai</td>
-              </tr>
-              <tr>
-                <td style={{ whiteSpace: "nowrap" }}>Pada Tanggal</td>
-                <td>:</td>
-                <td>{formatDate(lpd.tgl_buat)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer ttd — Split into Left (Mengetahui) and Right (Kepala UPTD) */}
-        <div style={{ display: "flex", justifyContent: "space-between", pageBreakInside: "avoid" }}>
-          {/* COLUMN LEFT: Mengetahui */}
-          <div style={{ width: 250, textAlign: "center" }}>
-            <div>Mengetahui,</div>
-            <div style={{ height: 80 }} />
-            <div>( ............................................ )</div>
+        {/* Signature block (Dikeluarkan + TTD) — kept together on one page */}
+        <div className="spt-signature-block">
+          {/* Footer Date (Dikeluarkan) - Placed ABOVE the signatures */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+            <table style={{ width: 300, marginBottom: 8 }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: 110, whiteSpace: "nowrap" }}>Dikeluarkan</td>
+                  <td>:</td>
+                  <td>Kumai</td>
+                </tr>
+                <tr>
+                  <td style={{ whiteSpace: "nowrap" }}>Pada Tanggal</td>
+                  <td>:</td>
+                  <td>{formatDate(lpd.tgl_buat)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          {/* COLUMN RIGHT: Kepala UPTD */}
-          <div style={{ width: 300, textAlign: "center" }}>
-            <div>Kepala UPTD Puskesmas Kumai</div>
-            <div style={{ height: 80 }} />
-            <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
-              {lpd.kepala?.nama ?? "—"}
+
+          {/* Footer ttd — Split into Left (Mengetahui) and Right (Kepala UPTD) */}
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            {/* COLUMN LEFT: Mengetahui */}
+            <div style={{ width: 250, textAlign: "center" }}>
+              <div>Mengetahui,</div>
+              <div style={{ height: 80 }} />
+              <div>( ............................................ )</div>
             </div>
-            <div>{lpd.kepala?.master_golongan?.nama_golongan ?? ""}</div>
-            <div>
-              NIP {lpd.kepala?.nip ? formatNip(lpd.kepala.nip) : "—"}
+            {/* COLUMN RIGHT: Kepala UPTD */}
+            <div style={{ width: 300, textAlign: "center" }}>
+              <div>Kepala UPTD Puskesmas Kumai</div>
+              <div style={{ height: 80 }} />
+              <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
+                {lpd.kepala?.nama ?? "—"}
+              </div>
+              <div>{lpd.kepala?.master_golongan?.nama_golongan ?? ""}</div>
+              <div>
+                NIP {lpd.kepala?.nip ? formatNip(lpd.kepala.nip) : "—"}
+              </div>
             </div>
           </div>
         </div>
