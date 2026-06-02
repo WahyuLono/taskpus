@@ -61,17 +61,22 @@ function PrintSptPage() {
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
+          .spt-page { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .spt-petugas-item { page-break-inside: avoid; break-inside: avoid; }
+          .spt-signature-block { page-break-inside: avoid; break-inside: avoid; orphans: 4; widows: 4; }
+          .spt-page ol li { page-break-inside: avoid; break-inside: avoid; }
         }
         .spt-page {
           font-family: Arial, sans-serif;
-          font-size: 11pt;
+          font-size: 10pt;
           line-height: 1.25;
           color: #000;
           background: white;
           max-width: 21cm;
           margin: 0 auto;
-          padding: 1cm 2cm;
+          padding: 0;
         }
+        @media screen { .spt-page { padding: 1cm 2cm; } }
         .spt-page h1 { font-size: 13pt; font-weight: bold; text-decoration: underline; text-align: center; margin: 0; }
         .spt-page table { border-collapse: collapse; }
         .spt-page td { vertical-align: top; padding: 1px 4px; }
