@@ -258,9 +258,10 @@ function PrintLaporanPage() {
           </tbody>
         </table>
 
-        <p style={{ fontWeight: "bold", marginBottom: 14 }}>
+        <p className="keep-with-next" style={{ fontWeight: "bold", marginBottom: 14 }}>
           Yang Melaksanakan Perjalanan Dinas:
         </p>
+
 
         {petugas.map((p, i) => (
           <div key={p.id_user} className="ttd-block">
