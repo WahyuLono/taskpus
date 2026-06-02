@@ -87,6 +87,13 @@ function PrintLaporanPage() {
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
+          .lpd-page { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .lpd-page table, .lpd-page tr, .lpd-page td { page-break-inside: avoid; break-inside: avoid; }
+          .ttd-block { page-break-inside: avoid; break-inside: avoid; orphans: 4; widows: 4; }
+          .keep-with-next { page-break-after: avoid; break-after: avoid; }
+        }
+        @media screen {
+          .lpd-page { padding: 1cm 1.8cm; }
         }
         .lpd-page {
           font-family: Arial, sans-serif;
@@ -96,7 +103,7 @@ function PrintLaporanPage() {
           background: white;
           max-width: 21cm;
           margin: 0 auto;
-          padding: 1cm 1.8cm;
+          padding: 0;
         }
         .lpd-page h1 {
           font-size: 13pt;
@@ -157,6 +164,7 @@ function PrintLaporanPage() {
           margin-top: 56px;
         }
       `}</style>
+
 
       <div className="no-print fixed top-3 right-3 flex gap-2 z-50">
         <button
