@@ -188,6 +188,7 @@ function PrintSptPage() {
                 {petugas.map((p, i) => (
                   <table
                     key={p.id_user}
+                    className="spt-petugas-item"
                     style={{ width: "100%", marginBottom: 10 }}
                   >
                     <tbody>
