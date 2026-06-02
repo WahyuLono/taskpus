@@ -61,17 +61,22 @@ function PrintSptPage() {
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
+          .spt-page { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .spt-petugas-item { page-break-inside: avoid; break-inside: avoid; }
+          .spt-signature-block { page-break-inside: avoid; break-inside: avoid; orphans: 4; widows: 4; }
+          .spt-page ol li { page-break-inside: avoid; break-inside: avoid; }
         }
         .spt-page {
           font-family: Arial, sans-serif;
-          font-size: 11pt;
+          font-size: 10pt;
           line-height: 1.25;
           color: #000;
           background: white;
           max-width: 21cm;
           margin: 0 auto;
-          padding: 1cm 2cm;
+          padding: 0;
         }
+        @media screen { .spt-page { padding: 1cm 2cm; } }
         .spt-page h1 { font-size: 13pt; font-weight: bold; text-decoration: underline; text-align: center; margin: 0; }
         .spt-page table { border-collapse: collapse; }
         .spt-page td { vertical-align: top; padding: 1px 4px; }
@@ -183,6 +188,7 @@ function PrintSptPage() {
                 {petugas.map((p, i) => (
                   <table
                     key={p.id_user}
+                    className="spt-petugas-item"
                     style={{ width: "100%", marginBottom: 10 }}
                   >
                     <tbody>
@@ -254,42 +260,45 @@ function PrintSptPage() {
           </tbody>
         </table>
 
-        {/* Footer Date (Dikeluarkan) - Placed ABOVE the signatures */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10, pageBreakInside: "avoid" }}>
-          <table style={{ width: 300, marginBottom: 8 }}>
-            <tbody>
-              <tr>
-                <td style={{ width: 110, whiteSpace: "nowrap" }}>Dikeluarkan</td>
-                <td>:</td>
-                <td>Kumai</td>
-              </tr>
-              <tr>
-                <td style={{ whiteSpace: "nowrap" }}>Pada Tanggal</td>
-                <td>:</td>
-                <td>{formatDate(lpd.tgl_buat)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer ttd — Split into Left (Mengetahui) and Right (Kepala UPTD) */}
-        <div style={{ display: "flex", justifyContent: "space-between", pageBreakInside: "avoid" }}>
-          {/* COLUMN LEFT: Mengetahui */}
-          <div style={{ width: 250, textAlign: "center" }}>
-            <div>Mengetahui,</div>
-            <div style={{ height: 80 }} />
-            <div>( ............................................ )</div>
+        {/* Signature block (Dikeluarkan + TTD) — kept together on one page */}
+        <div className="spt-signature-block">
+          {/* Footer Date (Dikeluarkan) - Placed ABOVE the signatures */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+            <table style={{ width: 300, marginBottom: 8 }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: 110, whiteSpace: "nowrap" }}>Dikeluarkan</td>
+                  <td>:</td>
+                  <td>Kumai</td>
+                </tr>
+                <tr>
+                  <td style={{ whiteSpace: "nowrap" }}>Pada Tanggal</td>
+                  <td>:</td>
+                  <td>{formatDate(lpd.tgl_buat)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          {/* COLUMN RIGHT: Kepala UPTD */}
-          <div style={{ width: 300, textAlign: "center" }}>
-            <div>Kepala UPTD Puskesmas Kumai</div>
-            <div style={{ height: 80 }} />
-            <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
-              {lpd.kepala?.nama ?? "—"}
+
+          {/* Footer ttd — Split into Left (Mengetahui) and Right (Kepala UPTD) */}
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            {/* COLUMN LEFT: Mengetahui */}
+            <div style={{ width: 250, textAlign: "center" }}>
+              <div>Mengetahui,</div>
+              <div style={{ height: 80 }} />
+              <div>( ............................................ )</div>
             </div>
-            <div>{lpd.kepala?.master_golongan?.nama_golongan ?? ""}</div>
-            <div>
-              NIP {lpd.kepala?.nip ? formatNip(lpd.kepala.nip) : "—"}
+            {/* COLUMN RIGHT: Kepala UPTD */}
+            <div style={{ width: 300, textAlign: "center" }}>
+              <div>Kepala UPTD Puskesmas Kumai</div>
+              <div style={{ height: 80 }} />
+              <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
+                {lpd.kepala?.nama ?? "—"}
+              </div>
+              <div>{lpd.kepala?.master_golongan?.nama_golongan ?? ""}</div>
+              <div>
+                NIP {lpd.kepala?.nip ? formatNip(lpd.kepala.nip) : "—"}
+              </div>
             </div>
           </div>
         </div>
