@@ -24,6 +24,21 @@ import {
 } from "@/components/ui/dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
+import imageCompression from "browser-image-compression";
+
+const COMPRESSION_OPTS = {
+  maxSizeMB: 0.25,
+  maxWidthOrHeight: 1920,
+  initialQuality: 0.8,
+  useWebWorker: true,
+  fileType: "image/jpeg" as const,
+};
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export const Route = createFileRoute("/_authenticated/lpd/$id")({
   component: LpdDetailPage,
@@ -749,10 +764,16 @@ function LaporanFormView({
   );
   const canSubmit = allFilled && (!!file || hasExistingFoto);
 
-  const handleFile = (f: File | null) => {
+  const handleFile = async (f: File | null) => {
     if (!f) {
       setFile(null);
       setPreview(null);
+      return;
+    }
+    if (/heic|heif/i.test(f.type) || /\.(heic|heif)$/i.test(f.name)) {
+      toast.error("Format HEIC tidak didukung", {
+        description: "Silakan konversi ke JPG/PNG terlebih dahulu.",
+      });
       return;
     }
     if (!f.type.startsWith("image/")) {
@@ -763,8 +784,29 @@ function LaporanFormView({
       toast.error(`Ukuran file maksimal ${MAX_FOTO_MB}MB`);
       return;
     }
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
+
+    const tId = toast.loading("Mengompres foto…");
+    try {
+      const compressed = await imageCompression(f, COMPRESSION_OPTS);
+      const finalFile = new File(
+        [compressed],
+        f.name.replace(/\.[^.]+$/, "") + ".jpg",
+        { type: "image/jpeg" },
+      );
+      toast.success("Foto siap diunggah", {
+        id: tId,
+        description: `${formatBytes(f.size)} → ${formatBytes(finalFile.size)}`,
+      });
+      setFile(finalFile);
+      setPreview(URL.createObjectURL(finalFile));
+    } catch (err) {
+      toast.warning("Kompresi gagal, memakai file asli", {
+        id: tId,
+        description: (err as Error).message,
+      });
+      setFile(f);
+      setPreview(URL.createObjectURL(f));
+    }
   };
 
   const mut = useMutation({
