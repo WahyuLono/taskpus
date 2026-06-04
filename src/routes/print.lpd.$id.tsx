@@ -118,7 +118,7 @@ function PrintSptPage() {
             style={{ width: 75, height: 75, objectFit: "contain", flexShrink: 0 }}
           />
           <div style={{ flex: 1, textAlign: "center" }}>
-            <p style={{ margin: 0, fontWeight: "bold", fontSize: "14pt" }}>
+            <p style={{ margin: 0, fontWeight: "bold", fontSize: "13pt", whiteSpace: "nowrap" }}>
               PEMERINTAH KABUPATEN KOTAWARINGIN BARAT
             </p>
             <p style={{ margin: 0, fontWeight: "bold", fontSize: "13pt" }}>
