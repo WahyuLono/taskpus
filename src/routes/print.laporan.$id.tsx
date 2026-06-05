@@ -156,7 +156,8 @@ function PrintLaporanPage() {
           grid-template-columns: 1fr auto;
           column-gap: 24px;
           align-items: end;
-          margin-bottom: 56px;
+          padding-top: 24px;
+          margin-bottom: 32px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
