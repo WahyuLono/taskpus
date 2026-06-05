@@ -271,17 +271,19 @@ function PrintLaporanPage() {
 
         {petugas.map((p, i) => (
           <div key={p.id_user} className="ttd-block">
-            <div className="ttd-row">
-              <div>{i + 1}.</div>
-              <div>Nama</div>
-              <div>:</div>
-              <div>{p.nama ?? "—"}</div>
-            </div>
-            <div className="ttd-row">
-              <div />
-              <div>NIP</div>
-              <div>:</div>
-              <div>{p.nip ? formatNip(p.nip) : "—"}</div>
+            <div>
+              <div className="ttd-row">
+                <div>{i + 1}.</div>
+                <div>Nama</div>
+                <div>:</div>
+                <div>{p.nama ?? "—"}</div>
+              </div>
+              <div className="ttd-row">
+                <div />
+                <div>NIP</div>
+                <div>:</div>
+                <div>{p.nip ? formatNip(p.nip) : "—"}</div>
+              </div>
             </div>
             <div className="ttd-line">(……………………………………)</div>
           </div>
