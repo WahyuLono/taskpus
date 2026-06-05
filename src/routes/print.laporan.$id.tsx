@@ -152,7 +152,13 @@ function PrintLaporanPage() {
           object-fit: contain;
         }
         .ttd-block {
-          margin-bottom: 26px;
+          display: grid;
+          grid-template-columns: 1fr auto;
+          column-gap: 24px;
+          align-items: end;
+          margin-bottom: 56px;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .ttd-row {
           display: grid;
@@ -161,7 +167,7 @@ function PrintLaporanPage() {
         }
         .ttd-line {
           text-align: right;
-          margin-top: 56px;
+          white-space: nowrap;
         }
       `}</style>
 
