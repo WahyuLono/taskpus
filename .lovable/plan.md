@@ -1,32 +1,34 @@
-## Tujuan
-Pada cetak LPD (`/print/laporan/$id`), bagian "Yang Melaksanakan Perjalanan Dinas" saat ini menampilkan Nama + NIP di atas, lalu garis tanda tangan `(……………)` jauh di bawah kanan. Client minta garis tanda tangan tetap di kanan, Nama/NIP tetap di kiri, tapi **posisi Nama/NIP diturunkan agar sejajar (satu baris) dengan garis tanda tangan**.
+## Masalah
+Pada cetak LPD, ketika daftar petugas terpotong ke halaman ke-2, petugas pertama di halaman baru (mis. nomor 3) menempel terlalu dekat dengan margin atas — terasa sempit karena `.ttd-block` hanya punya `margin-bottom: 56px` (jarak ke bawah), tidak ada padding/margin atas, jadi browser meletakkannya persis di batas margin atas halaman baru.
 
-## File yang diubah
-- `src/routes/print.laporan.$id.tsx` (hanya bagian render petugas + CSS `.ttd-block` / `.ttd-row` / `.ttd-line`)
+## Solusi
+Beri ruang vertikal **di atas** tiap blok petugas, bukan hanya di bawah, supaya:
+- Antar petugas di halaman yang sama: jarak tetap nyaman (tidak dobel jadi terlalu jauh).
+- Petugas pertama di halaman baru setelah page-break: punya "napas" di atas garis ttd.
 
-Tidak ada perubahan data, logic, atau file lain.
-
-## Perubahan layout (visual)
+## Perubahan
+File: `src/routes/print.laporan.$id.tsx` — hanya CSS `.ttd-block`.
 
 Sebelum:
-```text
-1. Nama : DR. VENY ANDAYANI
-   NIP  : 19860213...
-                                          (……………………………………)
+```css
+.ttd-block {
+  ...
+  margin-bottom: 56px;
+}
 ```
 
 Sesudah:
-```text
-1. Nama : DR. VENY ANDAYANI
-   NIP  : 19860213...                     (……………………………………)
+```css
+.ttd-block {
+  ...
+  padding-top: 24px;     /* ruang atas — terlihat juga setelah page-break */
+  margin-bottom: 32px;   /* dikurangi agar total jarak antar petugas ±56px tetap */
+}
 ```
 
-Garis tanda tangan berada di kanan, **sejajar vertikal dengan baris NIP** (baris terakhir blok kiri). Ruang kosong di atas garis tetap ada untuk paraf basah — dicapai dengan memberi `margin-top` pada **seluruh blok petugas** (jarak antar petugas), bukan pada garisnya saja.
+Catatan teknis:
+- `padding-top` (bukan `margin-top`) penting karena `margin-top` sering dibuang browser di awal halaman baru setelah page-break; `padding` tetap dirender.
+- Total jarak antar petugas pada halaman yang sama: `32px (margin-bottom) + 24px (padding-top berikutnya) = 56px`, sama dengan sebelumnya — tidak ada perubahan visual untuk petugas yang tidak terpotong halaman.
+- `page-break-inside: avoid` pada `.ttd-block` tetap dipertahankan.
 
-## Detail teknis
-1. Bungkus tiap petugas dalam grid 2 kolom: kiri = Nama/NIP, kanan = garis ttd.
-2. Kolom kanan pakai `align-self: end` agar garis menempel ke baris bawah blok kiri (NIP).
-3. Hapus `margin-top: 56px` dari `.ttd-line`; pindahkan jarak antar-petugas ke `.ttd-block` (`margin-bottom` diperbesar, mis. 48–56px) supaya tetap ada ruang untuk paraf.
-4. Pertahankan `page-break-inside: avoid` agar satu petugas tidak terpotong antar halaman.
-
-Tidak menyentuh `print.lpd.$id.tsx` (SPT) — perubahan hanya untuk cetak LPD/Laporan sesuai screenshot.
+Tidak ada perubahan margin `@page`, tidak ada perubahan layout grid kiri/kanan, tidak menyentuh `print.lpd.$id.tsx`.
