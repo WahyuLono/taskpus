@@ -181,6 +181,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifikasi: {
+        Row: {
+          created_at: string
+          id: string
+          id_lpd: string | null
+          id_user: string
+          is_read: boolean
+          judul: string
+          pesan: string
+          read_at: string | null
+          tipe: Database["public"]["Enums"]["notifikasi_tipe"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_lpd?: string | null
+          id_user: string
+          is_read?: boolean
+          judul: string
+          pesan: string
+          read_at?: string | null
+          tipe: Database["public"]["Enums"]["notifikasi_tipe"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_lpd?: string | null
+          id_user?: string
+          is_read?: boolean
+          judul?: string
+          pesan?: string
+          read_at?: string | null
+          tipe?: Database["public"]["Enums"]["notifikasi_tipe"]
+        }
+        Relationships: []
+      }
       settings_config: {
         Row: {
           id_config: number
@@ -384,6 +420,7 @@ export type Database = {
     }
     Enums: {
       approval_status_lpd: "Draft" | "Menunggu" | "Disetujui" | "Ditolak"
+      notifikasi_tipe: "lpd_submitted" | "lpd_approved" | "lpd_rejected"
       role_aplikasi: "Admin" | "Petugas"
       status_pegawai: "ASN" | "NON ASN"
       status_surat: "Belum" | "Sudah" | "Batal"
@@ -515,6 +552,7 @@ export const Constants = {
   public: {
     Enums: {
       approval_status_lpd: ["Draft", "Menunggu", "Disetujui", "Ditolak"],
+      notifikasi_tipe: ["lpd_submitted", "lpd_approved", "lpd_rejected"],
       role_aplikasi: ["Admin", "Petugas"],
       status_pegawai: ["ASN", "NON ASN"],
       status_surat: ["Belum", "Sudah", "Batal"],
