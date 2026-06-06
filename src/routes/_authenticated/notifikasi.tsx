@@ -17,7 +17,7 @@ const PAGE_SIZE = 20;
 
 const TIPE_ICON: Record<string, { icon: string; cls: string }> = {
   lpd_submitted: { icon: "assignment_turned_in", cls: "bg-secondary-container text-on-secondary-container" },
-  lpd_approved: { icon: "check_circle", cls: "bg-success-container text-success" },
+  lpd_approved: { icon: "check_circle", cls: "bg-primary/15 text-primary" },
   lpd_rejected: { icon: "cancel", cls: "bg-destructive/15 text-destructive" },
 };
 
