@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationBell } from "@/components/notifikasi/notification-bell";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
