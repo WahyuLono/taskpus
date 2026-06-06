@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationBell } from "@/components/notifikasi/notification-bell";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
@@ -129,6 +130,10 @@ function AuthLayout() {
           <div className="flex-1 min-w-0">
             <PageTitle pathname={location.pathname} />
           </div>
+
+          <NotificationBell />
+
+
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
