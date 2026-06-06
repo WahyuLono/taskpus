@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTugasRouteImport } from './routes/_authenticated/tugas'
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
+import { Route as AuthenticatedNotifikasiRouteImport } from './routes/_authenticated/notifikasi'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMasterIndexRouteImport } from './routes/_authenticated/master.index'
 import { Route as AuthenticatedLpdIndexRouteImport } from './routes/_authenticated/lpd.index'
@@ -50,6 +51,11 @@ const AuthenticatedTugasRoute = AuthenticatedTugasRouteImport.update({
 const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedNotifikasiRoute = AuthenticatedNotifikasiRouteImport.update({
+  id: '/notifikasi',
+  path: '/notifikasi',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/notifikasi': typeof AuthenticatedNotifikasiRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/tugas': typeof AuthenticatedTugasRoute
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/notifikasi': typeof AuthenticatedNotifikasiRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/tugas': typeof AuthenticatedTugasRoute
   '/lpd/$id': typeof AuthenticatedLpdIdRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/notifikasi': typeof AuthenticatedNotifikasiRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
   '/_authenticated/tugas': typeof AuthenticatedTugasRoute
   '/_authenticated/lpd/$id': typeof AuthenticatedLpdIdRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/dashboard'
+    | '/notifikasi'
     | '/profil'
     | '/tugas'
     | '/lpd/$id'
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/dashboard'
+    | '/notifikasi'
     | '/profil'
     | '/tugas'
     | '/lpd/$id'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/dashboard'
+    | '/_authenticated/notifikasi'
     | '/_authenticated/profil'
     | '/_authenticated/tugas'
     | '/_authenticated/lpd/$id'
@@ -286,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof AuthenticatedProfilRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notifikasi': {
+      id: '/_authenticated/notifikasi'
+      path: '/notifikasi'
+      fullPath: '/notifikasi'
+      preLoaderRoute: typeof AuthenticatedNotifikasiRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
@@ -384,6 +403,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedNotifikasiRoute: typeof AuthenticatedNotifikasiRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
   AuthenticatedTugasRoute: typeof AuthenticatedTugasRoute
   AuthenticatedLpdIdRoute: typeof AuthenticatedLpdIdRoute
@@ -400,6 +420,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedNotifikasiRoute: AuthenticatedNotifikasiRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
   AuthenticatedTugasRoute: AuthenticatedTugasRoute,
   AuthenticatedLpdIdRoute: AuthenticatedLpdIdRoute,
@@ -428,3 +449,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

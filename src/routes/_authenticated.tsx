@@ -130,6 +130,10 @@ function AuthLayout() {
             <PageTitle pathname={location.pathname} />
           </div>
 
+          <NotificationBell />
+
+
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 px-2 py-1.5 rounded-full hover:bg-surface-container">
