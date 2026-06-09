@@ -343,9 +343,9 @@ export function Section({
   );
 }
 
-export function Fld({ label, children }: { label: string; children: React.ReactNode }) {
+export function Fld({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", className)}>
       <Label className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
         {label}
       </Label>
