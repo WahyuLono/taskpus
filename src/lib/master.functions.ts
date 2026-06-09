@@ -75,12 +75,27 @@ export const listAllUsers = createServerFn({ method: "GET" })
 
 // ---------- Generic name CRUD ----------
 
-const NamaSchema = z.object({ nama: z.string().trim().min(2).max(120) });
+const namaField = z
+  .string()
+  .trim()
+  .min(2, { message: "Nama minimal 2 karakter" })
+  .max(300, { message: "Nama maksimal 300 karakter" });
+
+const NamaSchema = z.object({ nama: namaField });
 const NamaWithIdSchema = z.object({
   id: z.number().int().positive(),
-  nama: z.string().trim().min(2).max(120),
+  nama: namaField,
 });
 const IdSchema = z.object({ id: z.number().int().positive() });
+
+function parseInput<T>(schema: z.ZodType<T>, data: unknown): T {
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    const msg = result.error.issues.map((i) => i.message).join("; ");
+    throw new Error(msg || "Input tidak valid");
+  }
+  return result.data;
+}
 
 // Rangka
 export const addRangka = createServerFn({ method: "POST" })
