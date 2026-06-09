@@ -407,7 +407,9 @@ export function QuickSelect({
               onChange={(e) => setQ(e.target.value)}
               placeholder="Cari atau ketik baru…"
               className="h-9"
+              maxLength={300}
             />
+
           </div>
           <div className="overflow-y-auto flex-1">
             {filtered.map((o) => (

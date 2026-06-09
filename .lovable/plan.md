@@ -1,61 +1,32 @@
-## Fitur Notifikasi (Admin & Petugas)
+## Masalah
 
-Menambahkan lonceng notifikasi di header (posisi sesuai tanda merah), dengan badge jumlah belum dibaca, dropdown daftar notifikasi, dan halaman "Semua Notifikasi".
+Saat user mengetik nama baru di "Dalam Rangka" / "Tempat" yang melebihi 120 karakter, toast menampilkan dump JSON dari `ZodError` (mis. `[ { "code": "too_big", "maximum": 120, ... } ]`) — bukan pesan yang bisa dibaca.
 
-### Trigger Notifikasi
+Penyebab: pada server functions, validator memakai `Schema.parse(d)`. Saat gagal, `ZodError.message` adalah JSON-string dari `issues`, lalu dilempar apa adanya ke client dan tampil di `toast.error(e.message)`.
 
-1. **Petugas → Admin**: saat petugas submit Laporan Hasil Pelaksanaan Tugas untuk minta persetujuan.
-   - Pesan: "Petugas {nama} mengajukan LPD {no_surat} untuk persetujuan."
-2. **Admin → Petugas (semua petugas pada SPT itu)**: saat admin menyetujui LPD.
-   - Pesan: "LPD {no_surat} telah disetujui oleh admin."
-3. **Admin → Petugas**: saat admin menolak LPD.
-   - Pesan: "LPD {no_surat} ditolak. Catatan: {catatan}."
+Ya, batas 120 karakter memang sengaja dipasang sebagai pembatas input untuk semua nama master (Dalam Rangka, Tempat, Golongan).
 
-Klik notifikasi → arahkan ke `/lpd/{id_lpd}` dan tandai sebagai dibaca.
+## Solusi
 
-### Database (migration)
+Dua perbaikan kecil, hanya di lapisan validasi/UI — tidak mengubah logika bisnis.
 
-Tabel baru `public.notifikasi`:
-- `id` (uuid, pk)
-- `id_user` (uuid, target penerima — FK ke master_user)
-- `id_lpd` (uuid, nullable, FK ke transaksi_lpd)
-- `tipe` (enum: `lpd_submitted`, `lpd_approved`, `lpd_rejected`)
-- `judul` (text), `pesan` (text)
-- `is_read` (bool, default false)
-- `created_at`, `read_at`
+### 1) Pesan Zod berbahasa Indonesia + helper konversi error
 
-RLS: user hanya bisa SELECT/UPDATE notifikasi miliknya (`auth.uid() = id_user`).
-GRANT SELECT, UPDATE ke `authenticated`; GRANT ALL ke `service_role`.
+Di `src/lib/master.functions.ts`:
 
-### Logika Insert Notifikasi
+- Tambahkan pesan eksplisit pada `NamaSchema` / `NamaWithIdSchema`:
+  - min(2): "Nama minimal 2 karakter"
+  - max(120): "Nama maksimal 120 karakter"
+- Buat helper kecil `parseInput(schema, data)` yang memanggil `safeParse` dan, jika gagal, melempar `new Error(<pesan issue pertama>)` (atau gabungan pesan dipisah `;` ). Pakai helper ini di semua `.inputValidator(...)` pada file ini (addRangka/updateRangka/deleteRangka, addTempat/..., addGolongan/...).
 
-Diintegrasikan di SQL function yang sudah ada (paling konsisten & atomic):
-- `submit_laporan_for_approval` → insert notifikasi ke semua user dengan role Admin.
-- `approve_lpd` → insert notifikasi ke semua petugas pada SPT tsb.
-- `reject_lpd` → idem, sertakan catatan penolakan.
+Hasilnya: toast akan menampilkan kalimat singkat yang jelas seperti "Nama maksimal 120 karakter".
 
-### Server Functions baru di `src/lib/notifikasi.functions.ts`
+### 2) Cegah input berlebih di UI
 
-- `listNotifikasi({ page, pageSize })` — daftar notifikasi user, urut terbaru.
-- `countUnread()` — jumlah belum dibaca (untuk badge).
-- `markAsRead({ id })` dan `markAllAsRead()`.
+Di `src/routes/_authenticated/lpd.baru.tsx` pada komponen `QuickSelect`, tambahkan `maxLength={120}` pada `<Input>` pencarian/tambah cepat sehingga user secara fisik tidak bisa mengetik lebih dari 120 karakter. Murni guard UX, validasi tetap di server.
 
-### UI
+## Yang tidak dilakukan
 
-**Komponen baru** `src/components/notifikasi/notification-bell.tsx`:
-- Tombol lonceng (`material-symbols-outlined notifications`) dengan badge merah berisi count unread.
-- Polling tiap 30 detik via `useQuery` `refetchInterval` (sederhana, tanpa realtime).
-- DropdownMenu menampilkan 8 notifikasi terbaru, ikon per tipe, waktu relatif (cth. "5 menit lalu"), highlight kalau belum dibaca.
-- Item klik → `markAsRead` + `navigate` ke detail LPD.
-- Footer dropdown: tombol "Tandai semua dibaca" dan link "Lihat semua".
-
-**Halaman baru** `src/routes/_authenticated/notifikasi.tsx`:
-- Daftar lengkap dengan paginasi, filter "Semua / Belum dibaca".
-
-**Sisipkan** `<NotificationBell />` di header `_authenticated.tsx` antara `PageTitle` dan dropdown profil (posisi sesuai tanda merah).
-
-### Yang tidak dilakukan
-
-- Tidak ada push browser / email — hanya in-app.
-- Tidak menambah Supabase Realtime (polling cukup); dapat di-upgrade nanti.
-- Tidak mengubah alur approval/submit yang sudah ada.
+- Tidak mengubah batas 120 karakter (tetap sesuai kebijakan saat ini). konfirmasi saya : batasan dinaikan menjadi 300 karakter
+- Tidak mengubah schema/migration database.
+- Tidak menyentuh fitur lain di luar form Buat SPT.
