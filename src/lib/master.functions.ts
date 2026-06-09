@@ -100,7 +100,7 @@ function parseInput<T>(schema: z.ZodType<T>, data: unknown): T {
 // Rangka
 export const addRangka = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => NamaSchema.parse(d))
+  .inputValidator((d) => parseInput(NamaSchema, d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("master_rangka")
@@ -113,7 +113,7 @@ export const addRangka = createServerFn({ method: "POST" })
 
 export const updateRangka = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => NamaWithIdSchema.parse(d))
+  .inputValidator((d) => parseInput(NamaWithIdSchema, d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("master_rangka")
@@ -125,7 +125,7 @@ export const updateRangka = createServerFn({ method: "POST" })
 
 export const deleteRangka = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => IdSchema.parse(d))
+  .inputValidator((d) => parseInput(IdSchema, d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("master_rangka")
@@ -138,7 +138,7 @@ export const deleteRangka = createServerFn({ method: "POST" })
 // Tempat
 export const addTempat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => NamaSchema.parse(d))
+  .inputValidator((d) => parseInput(NamaSchema, d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("master_tempat")
@@ -151,7 +151,7 @@ export const addTempat = createServerFn({ method: "POST" })
 
 export const updateTempat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => NamaWithIdSchema.parse(d))
+  .inputValidator((d) => parseInput(NamaWithIdSchema, d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("master_tempat")
@@ -163,7 +163,7 @@ export const updateTempat = createServerFn({ method: "POST" })
 
 export const deleteTempat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => IdSchema.parse(d))
+  .inputValidator((d) => parseInput(IdSchema, d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("master_tempat")
@@ -176,7 +176,7 @@ export const deleteTempat = createServerFn({ method: "POST" })
 // Golongan
 export const addGolongan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => NamaSchema.parse(d))
+  .inputValidator((d) => parseInput(NamaSchema, d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("master_golongan")
@@ -189,7 +189,7 @@ export const addGolongan = createServerFn({ method: "POST" })
 
 export const updateGolongan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => NamaWithIdSchema.parse(d))
+  .inputValidator((d) => parseInput(NamaWithIdSchema, d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("master_golongan")
@@ -201,7 +201,7 @@ export const updateGolongan = createServerFn({ method: "POST" })
 
 export const deleteGolongan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => IdSchema.parse(d))
+  .inputValidator((d) => parseInput(IdSchema, d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("master_golongan")
