@@ -184,7 +184,7 @@ function BuatSPTPage() {
 
         <Section title="Substansi" subtitle="Dalam rangka, tempat, dan pejabat penandatangan">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Fld label="Dalam Rangka">
+            <Fld label="Dalam Rangka" className="min-w-0">
               <QuickSelect
                 value={idRangka}
                 options={(rangka.data ?? []).map((r: any) => ({
@@ -197,7 +197,7 @@ function BuatSPTPage() {
                 adding={addRangkaMut.isPending}
               />
             </Fld>
-            <Fld label="Tempat">
+            <Fld label="Tempat" className="min-w-0">
               <QuickSelect
                 value={idTempat}
                 options={(tempat.data ?? []).map((r: any) => ({
@@ -343,9 +343,9 @@ export function Section({
   );
 }
 
-export function Fld({ label, children }: { label: string; children: React.ReactNode }) {
+export function Fld({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", className)}>
       <Label className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
         {label}
       </Label>
@@ -389,12 +389,18 @@ export function QuickSelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-left flex items-center justify-between"
+        className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-left flex items-center justify-between gap-2"
+        title={current?.label}
       >
-        <span className={current ? "text-on-surface" : "text-on-surface-variant"}>
+        <span
+          className={cn(
+            "truncate min-w-0 flex-1",
+            current ? "text-on-surface" : "text-on-surface-variant",
+          )}
+        >
           {current?.label ?? placeholder}
         </span>
-        <span className="material-symbols-outlined !text-[18px] text-on-surface-variant">
+        <span className="material-symbols-outlined !text-[18px] text-on-surface-variant shrink-0">
           expand_more
         </span>
       </button>
