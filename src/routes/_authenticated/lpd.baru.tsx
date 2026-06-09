@@ -184,7 +184,7 @@ function BuatSPTPage() {
 
         <Section title="Substansi" subtitle="Dalam rangka, tempat, dan pejabat penandatangan">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Fld label="Dalam Rangka">
+            <Fld label="Dalam Rangka" className="min-w-0">
               <QuickSelect
                 value={idRangka}
                 options={(rangka.data ?? []).map((r: any) => ({
@@ -197,7 +197,7 @@ function BuatSPTPage() {
                 adding={addRangkaMut.isPending}
               />
             </Fld>
-            <Fld label="Tempat">
+            <Fld label="Tempat" className="min-w-0">
               <QuickSelect
                 value={idTempat}
                 options={(tempat.data ?? []).map((r: any) => ({
