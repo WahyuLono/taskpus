@@ -389,12 +389,18 @@ export function QuickSelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-left flex items-center justify-between"
+        className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-left flex items-center justify-between gap-2"
+        title={current?.label}
       >
-        <span className={current ? "text-on-surface" : "text-on-surface-variant"}>
+        <span
+          className={cn(
+            "truncate min-w-0 flex-1",
+            current ? "text-on-surface" : "text-on-surface-variant",
+          )}
+        >
           {current?.label ?? placeholder}
         </span>
-        <span className="material-symbols-outlined !text-[18px] text-on-surface-variant">
+        <span className="material-symbols-outlined !text-[18px] text-on-surface-variant shrink-0">
           expand_more
         </span>
       </button>
