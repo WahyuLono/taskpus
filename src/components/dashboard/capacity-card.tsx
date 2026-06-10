@@ -146,7 +146,6 @@ export function CapacityCard() {
           <>
             <Row label="Database" metric={q.data?.database} isLoading={q.isLoading} />
             <Row label="File Storage" metric={q.data?.storage} isLoading={q.isLoading} />
-            <Row label="Egress (bulan ini)" metric={q.data?.egress} isLoading={q.isLoading} />
           </>
         )}
       </div>
