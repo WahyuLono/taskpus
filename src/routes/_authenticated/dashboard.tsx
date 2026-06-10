@@ -5,6 +5,7 @@ import { getDashboardStats, listLpd } from "@/lib/lpd.functions";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { StatusBadge } from "@/components/lpd/status-badge";
 import { formatDateRange } from "@/lib/format";
+import { CapacityCard } from "@/components/dashboard/capacity-card";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -79,7 +80,9 @@ function DashboardPage() {
         ))}
       </div>
 
-      <section className="bg-card rounded-xl border border-outline-variant shadow-card overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="lg:col-span-2 bg-card rounded-xl border border-outline-variant shadow-card overflow-hidden">
+
         <header className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
           <div>
             <h3 className="font-semibold text-on-surface">LPD Terbaru</h3>
@@ -139,7 +142,11 @@ function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </section>
+        </section>
+
+        {me?.role_user === "Admin" && <CapacityCard />}
+      </div>
     </div>
+
   );
 }
