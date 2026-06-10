@@ -366,6 +366,8 @@ export type Database = {
         }
         Returns: Json
       }
+      get_db_size: { Args: never; Returns: number }
+      get_storage_size: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["role_aplikasi"]
