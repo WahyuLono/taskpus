@@ -142,7 +142,11 @@ function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </section>
+        </section>
+
+        {me?.role_user === "Admin" && <CapacityCard />}
+      </div>
     </div>
+
   );
 }
