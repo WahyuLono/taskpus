@@ -5,6 +5,7 @@ import { getDashboardStats, listLpd } from "@/lib/lpd.functions";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { StatusBadge } from "@/components/lpd/status-badge";
 import { formatDateRange } from "@/lib/format";
+import { CapacityCard } from "@/components/dashboard/capacity-card";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
