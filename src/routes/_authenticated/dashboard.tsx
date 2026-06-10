@@ -80,7 +80,9 @@ function DashboardPage() {
         ))}
       </div>
 
-      <section className="bg-card rounded-xl border border-outline-variant shadow-card overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="lg:col-span-2 bg-card rounded-xl border border-outline-variant shadow-card overflow-hidden">
+
         <header className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
           <div>
             <h3 className="font-semibold text-on-surface">LPD Terbaru</h3>
