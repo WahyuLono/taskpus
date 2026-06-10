@@ -28,41 +28,72 @@ async function fetchEgress(): Promise<CapacityMetric> {
     return { status: "error", limit: LIMITS.egress, error: "SUPABASE_PROJECT_ID tidak tersedia" };
   }
 
+  const headers = { Authorization: `Bearer ${token}` };
+
   try {
-    const now = new Date();
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-    const end = now.toISOString();
-
-    // Daily stats endpoint exposes egress for the requested window.
-    const url = `https://api.supabase.com/v1/projects/${ref}/daily-stats?start_date=${encodeURIComponent(
-      start,
-    )}&end_date=${encodeURIComponent(end)}&attribute=total_egress_modified&interval=1d`;
-
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
+    // Step 1: get organization_id from project
+    const projRes = await fetch(`https://api.supabase.com/v1/projects/${ref}`, { headers });
+    if (!projRes.ok) {
+      const body = await projRes.text().catch(() => "");
       return {
         status: "error",
         limit: LIMITS.egress,
-        error: `Management API ${res.status}: ${body.slice(0, 120) || res.statusText}`,
+        error: `Management API ${projRes.status} (project): ${body.slice(0, 120) || projRes.statusText}`,
       };
     }
-
-    const json: any = await res.json();
-    const points: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-    let total = 0;
-    for (const p of points) {
-      const v = Number(p?.total_egress_modified ?? p?.value ?? p?.egress ?? 0);
-      if (Number.isFinite(v)) total += v;
+    const proj: any = await projRes.json();
+    const orgSlug: string | undefined = proj?.organization_id ?? proj?.organization?.slug;
+    if (!orgSlug) {
+      return { status: "error", limit: LIMITS.egress, error: "organization_id tidak ditemukan di response project" };
     }
-    return { status: "ok", used: Math.round(total), limit: LIMITS.egress };
+
+    // Step 2: get org usage
+    const usageRes = await fetch(
+      `https://api.supabase.com/v1/organizations/${orgSlug}/usage?project_ref=${ref}`,
+      { headers },
+    );
+    if (!usageRes.ok) {
+      const body = await usageRes.text().catch(() => "");
+      return {
+        status: "error",
+        limit: LIMITS.egress,
+        error: `Management API ${usageRes.status} (usage): ${body.slice(0, 120) || usageRes.statusText}`,
+      };
+    }
+    const usage: any = await usageRes.json();
+    const items: any[] = Array.isArray(usage?.usages)
+      ? usage.usages
+      : Array.isArray(usage?.data)
+        ? usage.data
+        : Array.isArray(usage)
+          ? usage
+          : [];
+
+    let total = 0;
+    let limitFromApi = 0;
+    for (const it of items) {
+      const key = String(it?.metric ?? it?.name ?? it?.key ?? "").toLowerCase();
+      if (!key.includes("egress")) continue;
+      const used = Number(it?.usage ?? it?.value ?? it?.used ?? 0);
+      if (Number.isFinite(used)) total += used;
+      const lim = Number(it?.pricing_free_units ?? it?.free_units ?? 0);
+      if (Number.isFinite(lim)) limitFromApi += lim;
+    }
+
+    if (items.length === 0) {
+      return { status: "error", limit: LIMITS.egress, error: "Response usage kosong / format tidak dikenal" };
+    }
+
+    return {
+      status: "ok",
+      used: Math.round(total),
+      limit: limitFromApi > 0 ? limitFromApi : LIMITS.egress,
+    };
   } catch (e: any) {
     return { status: "error", limit: LIMITS.egress, error: e?.message ?? "Unknown error" };
   }
 }
+
 
 export const getSupabaseCapacity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
