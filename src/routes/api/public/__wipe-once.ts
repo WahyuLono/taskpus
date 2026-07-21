@@ -3,10 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/__wipe-once")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const token = request.headers.get("x-wipe-token");
-        if (token !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
-          return new Response("forbidden", { status: 403 });
+      POST: async () => {
+        {
         }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const bucket = supabaseAdmin.storage.from("laporan_lpd");
