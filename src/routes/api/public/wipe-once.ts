@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/api/public/__wipe-once")({
+export const Route = createFileRoute("/api/public/wipe-once")({
   server: {
     handlers: {
       POST: async () => {
