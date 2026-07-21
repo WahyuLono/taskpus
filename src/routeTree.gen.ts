@@ -20,7 +20,6 @@ import { Route as AuthenticatedMasterIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedLpdIndexRouteImport } from './routes/_authenticated/lpd.index'
 import { Route as PrintLpdIdRouteImport } from './routes/print.lpd.$id'
 import { Route as PrintLaporanIdRouteImport } from './routes/print.laporan.$id'
-import { Route as ApiPublic_wipeOnceRouteImport } from './routes/api/public/__wipe-once'
 import { Route as AuthenticatedMasterUserRouteImport } from './routes/_authenticated/master.user'
 import { Route as AuthenticatedMasterTempatRouteImport } from './routes/_authenticated/master.tempat'
 import { Route as AuthenticatedMasterRangkaRouteImport } from './routes/_authenticated/master.rangka'
@@ -85,11 +84,6 @@ const PrintLaporanIdRoute = PrintLaporanIdRouteImport.update({
   path: '/print/laporan/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublic_wipeOnceRoute = ApiPublic_wipeOnceRouteImport.update({
-  id: '/api/public/__wipe-once',
-  path: '/api/public',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedMasterUserRoute = AuthenticatedMasterUserRouteImport.update({
   id: '/master/user',
   path: '/master/user',
@@ -149,7 +143,6 @@ export interface FileRoutesByFullPath {
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
-  '/api/public': typeof ApiPublic_wipeOnceRoute
   '/print/laporan/$id': typeof PrintLaporanIdRoute
   '/print/lpd/$id': typeof PrintLpdIdRoute
   '/lpd/': typeof AuthenticatedLpdIndexRoute
@@ -170,7 +163,6 @@ export interface FileRoutesByTo {
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
-  '/api/public': typeof ApiPublic_wipeOnceRoute
   '/print/laporan/$id': typeof PrintLaporanIdRoute
   '/print/lpd/$id': typeof PrintLpdIdRoute
   '/lpd': typeof AuthenticatedLpdIndexRoute
@@ -193,7 +185,6 @@ export interface FileRoutesById {
   '/_authenticated/master/rangka': typeof AuthenticatedMasterRangkaRoute
   '/_authenticated/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/_authenticated/master/user': typeof AuthenticatedMasterUserRoute
-  '/api/public/__wipe-once': typeof ApiPublic_wipeOnceRoute
   '/print/laporan/$id': typeof PrintLaporanIdRoute
   '/print/lpd/$id': typeof PrintLpdIdRoute
   '/_authenticated/lpd/': typeof AuthenticatedLpdIndexRoute
@@ -216,7 +207,6 @@ export interface FileRouteTypes {
     | '/master/rangka'
     | '/master/tempat'
     | '/master/user'
-    | '/api/public'
     | '/print/laporan/$id'
     | '/print/lpd/$id'
     | '/lpd/'
@@ -237,7 +227,6 @@ export interface FileRouteTypes {
     | '/master/rangka'
     | '/master/tempat'
     | '/master/user'
-    | '/api/public'
     | '/print/laporan/$id'
     | '/print/lpd/$id'
     | '/lpd'
@@ -259,7 +248,6 @@ export interface FileRouteTypes {
     | '/_authenticated/master/rangka'
     | '/_authenticated/master/tempat'
     | '/_authenticated/master/user'
-    | '/api/public/__wipe-once'
     | '/print/laporan/$id'
     | '/print/lpd/$id'
     | '/_authenticated/lpd/'
@@ -271,7 +259,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
-  ApiPublic_wipeOnceRoute: typeof ApiPublic_wipeOnceRoute
   PrintLaporanIdRoute: typeof PrintLaporanIdRoute
   PrintLpdIdRoute: typeof PrintLpdIdRoute
 }
@@ -353,13 +340,6 @@ declare module '@tanstack/react-router' {
       path: '/print/laporan/$id'
       fullPath: '/print/laporan/$id'
       preLoaderRoute: typeof PrintLaporanIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/__wipe-once': {
-      id: '/api/public/__wipe-once'
-      path: '/api/public'
-      fullPath: '/api/public'
-      preLoaderRoute: typeof ApiPublic_wipeOnceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/master/user': {
@@ -463,7 +443,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
-  ApiPublic_wipeOnceRoute: ApiPublic_wipeOnceRoute,
   PrintLaporanIdRoute: PrintLaporanIdRoute,
   PrintLpdIdRoute: PrintLpdIdRoute,
 }
