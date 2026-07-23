@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const UsernameSchema = z
   .string()
@@ -85,6 +84,7 @@ export const createUser = createServerFn({ method: "POST" })
   .inputValidator((d) => CreateUserSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const identifier = data.nip ?? data.username!.toLowerCase();
     const email = `${identifier}@lpd.internal`;
@@ -146,6 +146,7 @@ export const resetUserPassword = createServerFn({ method: "POST" })
   .inputValidator((d) => ResetPasswordSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.updateUserById(
       data.id_user,
       { password: data.password },
@@ -159,6 +160,7 @@ export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id_user: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     if (data.id_user === context.userId) {
       throw new Error("Tidak dapat menghapus akun Anda sendiri");
@@ -219,6 +221,7 @@ export const updateUser = createServerFn({ method: "POST" })
   .inputValidator((d) => UpdateUserSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Ambil row lama
     const { data: existing, error: loadErr } = await supabaseAdmin

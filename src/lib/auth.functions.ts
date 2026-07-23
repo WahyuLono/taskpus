@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const ResolveSchema = z.object({
   identifier: z
@@ -18,6 +17,7 @@ const ResolveSchema = z.object({
 export const resolveLoginEmail = createServerFn({ method: "POST" })
   .inputValidator((d) => ResolveSchema.parse(d))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const raw = data.identifier;
     const isNumeric = /^[0-9]+$/.test(raw);
 
