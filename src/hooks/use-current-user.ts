@@ -10,13 +10,26 @@ export function useSession() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+
+    // Prefer getUser() — validates the token with Supabase Auth — falling back
+    // to the local session if the server call fails (e.g. offline).
+    (async () => {
+      const { data: userData, error } = await supabase.auth.getUser();
       if (!mounted) return;
-      setUserId(data.session?.user.id ?? null);
+      if (!error && userData.user) {
+        setUserId(userData.user.id);
+        setReady(true);
+        return;
+      }
+      const { data: sess } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setUserId(sess.session?.user.id ?? null);
       setReady(true);
-    });
+    })();
+
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setUserId(session?.user.id ?? null);
+      setReady(true);
     });
     return () => {
       mounted = false;
@@ -36,5 +49,9 @@ export function useCurrentUser() {
     enabled: ready && !!userId,
     staleTime: 60_000,
   });
-  return { ...q, ready, userId };
+  // isReady = we know either the profile or that there's no session at all.
+  // While false, callers should show a skeleton instead of falling back to
+  // a "guest / non-admin" UI (which would flash before the profile lands).
+  const isReady = ready && (!userId || q.isSuccess || q.isError);
+  return { ...q, ready, userId, isReady };
 }

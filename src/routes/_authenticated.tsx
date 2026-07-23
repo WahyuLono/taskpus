@@ -41,7 +41,7 @@ const NAV: NavItem[] = [
 ];
 
 function AuthLayout() {
-  const { data: me, isLoading } = useCurrentUser();
+  const { data: me, isReady } = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -49,7 +49,9 @@ function AuthLayout() {
   useEffect(() => setSidebarOpen(false), [location.pathname]);
 
   const isAdmin = me?.role_user === "Admin";
-  const visible = NAV.filter((n) => !n.adminOnly || isAdmin);
+  // While the profile is still loading, hide role-gated items instead of
+  // showing them or the non-admin subset — prevents a flash of the wrong nav.
+  const visible = isReady ? NAV.filter((n) => !n.adminOnly || isAdmin) : [];
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -143,7 +145,7 @@ function AuthLayout() {
                 </div>
                 <div className="hidden md:flex flex-col items-start leading-tight">
                   <span className="text-sm font-semibold text-on-surface">
-                    {isLoading ? "Memuat…" : (me?.nama ?? "Pengguna")}
+                    {!isReady ? "Memuat…" : (me?.nama ?? "Pengguna")}
                   </span>
                   <div className="flex items-center gap-1">
                     {me?.role_user && (

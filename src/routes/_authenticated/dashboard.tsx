@@ -12,11 +12,11 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function DashboardPage() {
-  const { data: me } = useCurrentUser();
+  const { data: me, isReady } = useCurrentUser();
   const fetchStats = useServerFn(getDashboardStats);
   const fetchList = useServerFn(listLpd);
 
-  const enabled = !!me;
+  const enabled = isReady && !!me;
   const stats = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats(), enabled });
   const recent = useQuery({
     queryKey: ["lpd-recent"],
@@ -37,9 +37,11 @@ function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
           <p className="text-sm text-on-surface-variant">Selamat datang kembali,</p>
-          <h2 className="text-2xl font-bold text-on-surface">{me?.nama ?? "Pengguna"}</h2>
+          <h2 className="text-2xl font-bold text-on-surface">
+            {!isReady ? "Memuat…" : (me?.nama ?? "Pengguna")}
+          </h2>
         </div>
-        {me?.role_user === "Admin" && (
+        {isReady && me?.role_user === "Admin" && (
           <Link
             to="/lpd/baru"
             className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 shadow-card"
@@ -144,7 +146,7 @@ function DashboardPage() {
         </div>
         </section>
 
-        {me?.role_user === "Admin" && <CapacityCard />}
+        {isReady && me?.role_user === "Admin" && <CapacityCard />}
       </div>
     </div>
 

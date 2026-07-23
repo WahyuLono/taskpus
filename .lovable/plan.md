@@ -1,42 +1,39 @@
+## Masalah
 
-## Rencana Eksekusi
+Login sebagai `admin` (email `admin@lpd.internal`, id `969e808c…`) sukses dan server function `getCurrentUser` mengembalikan `role_user = "Admin"` dengan benar (dicek langsung di network log 07:09:08Z). RLS `master_user` juga sudah membolehkan user membaca baris miliknya sendiri (`auth.uid() = id_user`) — jadi bukan masalah role check maupun RLS.
 
-### Fase 1 — Reset data (tanpa migration; via insert tool + Storage API)
+Namun UI menampilkan dashboard "pengguna biasa" (header "Pengguna", tanpa tombol "Buat SPT Baru", sidebar tanpa menu admin, kartu Kapasitas tidak muncul). Ini terjadi karena `me` di komponen bernilai `undefined` pada saat render — masalah **cache & race di TanStack Query**, bukan di database.
 
-1. **Hapus semua file di bucket `laporan_lpd`** — via server function sekali-pakai yang memanggil `supabaseAdmin.storage.from('laporan_lpd').list()` rekursif lalu `.remove()`. (Bucket tetap ada, isinya kosong.)
-2. **Hapus baris DB** (via insert tool, urutan menghindari FK):
-   - `DELETE FROM public.notifikasi;`
-   - `DELETE FROM public.detail_petugas;`
-   - `DELETE FROM public.transaksi_lpd;`
-3. **Reset semua alokasi**: `UPDATE public.nomor_surat_allocation SET last_used_number = range_start - 1;` — definisi range dipertahankan, tapi counter kembali ke titik awal.
+## Akar Masalah
 
-### Fase 2 — Ubah format ke 4 digit (via migration)
+`useSession` (di `src/hooks/use-current-user.ts`) mulai dengan `userId = null`, lalu baru mengisi lewat `useEffect`. `useCurrentUser` memakai `["current-user", userId]` sebagai key — jadi query yang pertama kali dibuat memakai key `["current-user", null]` dan `enabled: false`. Ketika session muncul, query key berpindah ke `["current-user", <adminId>]`, tapi:
 
-4. `CREATE OR REPLACE FUNCTION public.create_lpd_baru(...)` — sama persis dengan versi sekarang, hanya mengganti:
-   - `lpad(v_nomor::text, 5, '0')` → `lpad(v_nomor::text, 4, '0')` di `v_no_surat`
-   - `lpad(v_nomor::text, 5, '0')` → `lpad(v_nomor::text, 4, '0')` di `v_no_surat_slug`
-5. Tambah CHECK constraint di `nomor_surat_allocation`:
-   ```sql
-   ALTER TABLE public.nomor_surat_allocation
-     ADD CONSTRAINT alloc_range_4digit CHECK (range_end <= 9999 AND range_start >= 1);
-   ```
-   (Aman karena semua range existing ≤ 1600.)
+- Tidak ada listener `onAuthStateChange` di root yang memanggil `queryClient.invalidateQueries()` — sisa cache dari sesi lama (mis. `ais@lpd.internal`) bisa tersaji sekejap.
+- `getSession()` yang dipakai `useSession` dan `_authenticated`'s `beforeLoad` kadang mengembalikan session lama sebelum sinkron; sebaiknya pakai `getUser()` untuk identitas.
+- `useSession`/`useCurrentUser` tidak menyediakan flag "profile siap" ke komponen, jadi UI merender fallback ("Pengguna") sebagai kondisi normal alih-alih skeleton.
 
-### Fase 3 — Sinkronisasi frontend
+## Solusi
 
-6. `src/lib/allocation.functions.ts` — ubah `RangeBase` dari `.max(99999)` menjadi `.max(9999)` untuk `range_start` dan `range_end`. Pesan error validasi ikut menyesuaikan.
+Perbaikan murni di frontend/hook (tidak ada perubahan schema, RPC, atau RLS — sudah benar):
 
-### Yang TIDAK diubah
-- Prefix `090/…/P.KI.YYYY` tetap.
-- RLS, fungsi approve/reject/submit_laporan, notifikasi runtime, kompresi foto, UI dashboard/LPD/master — tidak disentuh.
-- Definisi range alokasi existing (mis. 1404–1600) dipertahankan, hanya `last_used_number` yang direset.
-- Bucket `laporan_lpd` tetap ada dengan setting yang sama (hanya isinya dikosongkan).
+1. `**src/hooks/use-current-user.ts**`
+  - Ekspor status `isReady` gabungan: `sessionReady && (query.isSuccess || query.isError)`.
+  - Ganti `supabase.auth.getSession()` menjadi `getUser()` di dalam `useSession()` untuk memastikan identitas yang divalidasi server (fallback ke `getSession()` bila offline).
+  - Tetap invalidate query saat `onAuthStateChange` mengeluarkan `SIGNED_IN`/`SIGNED_OUT`/`USER_UPDATED` (untuk hook lokal).
+2. `**src/routes/__root.tsx**` — tambah satu listener global `onAuthStateChange`:
+  - Pada `SIGNED_IN` / `USER_UPDATED`: `queryClient.invalidateQueries({ queryKey: ["current-user"] })` + `router.invalidate()`.
+  - Pada `SIGNED_OUT`: `queryClient.removeQueries({ queryKey: ["current-user"] })` supaya profil lama tidak menempel di sesi baru.
+  - Filter event agar tidak refetch di `TOKEN_REFRESHED` / `INITIAL_SESSION` (mencegah storm).
+3. `**src/routes/login.tsx**` — setelah `signInWithPassword` sukses, panggil `queryClient.invalidateQueries({ queryKey: ["current-user"] })` sebelum `navigate({ to: "/dashboard" })`, supaya dashboard mendapat data segar sejak render pertama.
+4. `**src/routes/_authenticated/dashboard.tsx` & `src/routes/_authenticated.tsx**` — tampilkan skeleton/placeholder saat `!isReady` (bukan langsung fallback "Pengguna" & sidebar non-admin). Hindari flash of non-admin UI.
 
-### Hasil akhir yang diharapkan
-- `transaksi_lpd`, `detail_petugas`, `notifikasi` kosong.
-- Bucket `laporan_lpd` kosong.
-- SPT berikutnya yang dibuat Admin akan menghasilkan nomor 4 digit, mis. `090/1404/P.KI.2026` (menyesuaikan alokasi aktif tahun berjalan).
-- Master nomor surat tidak bisa lagi menerima range > 9999.
+## Verifikasi
 
-### Catatan
-Error upload dist di turn sebelumnya adalah gangguan infra S3 (bukan bug kode) — akan hilang saat build berikutnya.
+- Hard-refresh sebagai `admin` → header langsung "Administrator", sidebar berisi "Buat SPT" & "Data Master", tombol "Buat SPT Baru" muncul, kartu "Kapasitas Supabase" tampil.
+- Logout → login sebagai petugas (mis. `ais`) → UI non-admin, tidak ada bocor menu admin.
+- Logout dari petugas → login sebagai `admin` di tab yang sama tanpa refresh → UI langsung admin (bukti cache berhasil di-invalidate).
+- Buka `/master` & `/lpd/baru` sebagai admin → tidak ada redirect "Halaman ini hanya untuk Admin".
+
+Tidak ada migrasi DB, tidak ada perubahan pada RLS `master_user`, dan tidak ada perubahan pada `getCurrentUser` server function.
+
+Jawaban saya : Tolong terapkan seluruh 4 solusi perbaikan frontend dan TanStack Query tersebut sekarang.
