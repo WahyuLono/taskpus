@@ -4,6 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentUser, type CurrentUser } from "@/lib/me.functions";
 
+function isAuthError(error: unknown): boolean {
+  if (error instanceof Response && error.status === 401) return true;
+  if (error && typeof error === "object" && "status" in error && error.status === 401) return true;
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("unauthorized");
+}
+
 export function useSession() {
   const [ready, setReady] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -44,7 +51,14 @@ export function useCurrentUser() {
   const fetchMe = useServerFn(getCurrentUser);
   const q = useQuery<CurrentUser | null>({
     queryKey: ["current-user", userId],
-    queryFn: () => fetchMe(),
+    queryFn: async () => {
+      try {
+        return await fetchMe();
+      } catch (error) {
+        if (isAuthError(error)) return null;
+        throw error;
+      }
+    },
     enabled: ready && !!userId,
     staleTime: 60_000,
     retry: false,

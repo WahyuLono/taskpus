@@ -35,6 +35,8 @@ const TIPE_ICON: Record<string, { icon: string; cls: string }> = {
 };
 
 function isAuthError(error: unknown): boolean {
+  if (error instanceof Response && error.status === 401) return true;
+  if (error && typeof error === "object" && "status" in error && error.status === 401) return true;
   const message = error instanceof Error ? error.message : String(error ?? "");
   return message.toLowerCase().includes("unauthorized");
 }
