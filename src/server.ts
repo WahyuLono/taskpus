@@ -7,8 +7,6 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
-type RuntimeEnv = Record<string, string | undefined>;
-
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
@@ -25,26 +23,6 @@ function brandedErrorResponse(): Response {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
   });
-}
-
-function applyCloudflareRuntimeEnv(env: unknown) {
-  if (!env || typeof env !== "object") return;
-
-  const bindings = env as RuntimeEnv;
-  const assignments: Record<string, string | undefined> = {
-    SUPABASE_URL: bindings.SUPABASE_URL ?? bindings.VITE_SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY:
-      bindings.SUPABASE_PUBLISHABLE_KEY ?? bindings.VITE_SUPABASE_PUBLISHABLE_KEY,
-    SUPABASE_SERVICE_ROLE_KEY: bindings.SUPABASE_SERVICE_ROLE_KEY ?? bindings.SERVICE_ROLE_KEY,
-    SERVICE_ROLE_KEY: bindings.SERVICE_ROLE_KEY ?? bindings.SUPABASE_SERVICE_ROLE_KEY,
-    SUPABASE_PROJECT_ID: bindings.SUPABASE_PROJECT_ID ?? bindings.VITE_SUPABASE_PROJECT_ID,
-  };
-
-  for (const [key, value] of Object.entries(assignments)) {
-    if (value && !process.env[key]) {
-      process.env[key] = value;
-    }
-  }
 }
 
 function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
@@ -91,7 +69,6 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      applyCloudflareRuntimeEnv(env);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
