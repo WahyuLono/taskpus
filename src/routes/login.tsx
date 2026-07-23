@@ -21,6 +21,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const resolve = useServerFn(resolveLoginEmail);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -47,6 +48,9 @@ function LoginPage() {
         toast.error("Login gagal", { description: error.message });
         return;
       }
+      // Ensure fresh profile fetch for the new session before landing on dashboard.
+      qc.removeQueries({ queryKey: ["current-user"] });
+      await qc.invalidateQueries({ queryKey: ["current-user"] });
       toast.success("Login berhasil");
       navigate({ to: "/dashboard" });
     } finally {
