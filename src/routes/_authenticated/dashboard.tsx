@@ -146,7 +146,7 @@ function DashboardPage() {
         </div>
         </section>
 
-        {me?.role_user === "Admin" && <CapacityCard />}
+        {isReady && me?.role_user === "Admin" && <CapacityCard />}
       </div>
     </div>
 
