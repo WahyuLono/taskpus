@@ -129,6 +129,9 @@ function AuthSync() {
   const qc = useQueryClient();
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
+        return;
+      }
       if (event === "SIGNED_OUT") {
         qc.clear();
       } else {
