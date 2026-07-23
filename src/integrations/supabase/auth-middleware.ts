@@ -27,6 +27,17 @@ function createUserScopedClient(url: string, key: string, token: string) {
   })
 }
 
+function supabasePublishableFetch(key: string) {
+  return (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(init?.headers)
+    if (key.startsWith('sb_') && headers.get('Authorization') === `Bearer ${key}`) {
+      headers.delete('Authorization')
+    }
+    headers.set('apikey', key)
+    return fetch(input, { ...init, headers })
+  }
+}
+
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     
@@ -82,6 +93,9 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
                 ),
               );
             },
+          },
+          global: {
+            fetch: supabasePublishableFetch(SUPABASE_PUBLISHABLE_KEY!),
           },
         },
       );
