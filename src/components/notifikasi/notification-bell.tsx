@@ -13,6 +13,7 @@ import {
   markNotifikasiRead,
   markAllNotifikasiRead,
 } from "@/lib/notifikasi.functions";
+import { useSession } from "@/hooks/use-current-user";
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -42,17 +43,21 @@ export function NotificationBell() {
   const markOne = useServerFn(markNotifikasiRead);
   const markAll = useServerFn(markAllNotifikasiRead);
 
+  const { ready, userId } = useSession();
+  const isAuthed = ready && !!userId;
+
   const unreadQ = useQuery({
     queryKey: ["notifikasi-unread"],
     queryFn: () => fetchUnread(),
-    refetchInterval: 30_000,
+    enabled: isAuthed,
+    refetchInterval: isAuthed ? 30_000 : false,
     refetchIntervalInBackground: false,
   });
 
   const listQ = useQuery({
     queryKey: ["notifikasi-list", "dropdown"],
     queryFn: () => fetchList({ data: { page: 1, pageSize: 8, unreadOnly: false } }),
-    enabled: open,
+    enabled: open && isAuthed,
   });
 
   const markOneM = useMutation({
