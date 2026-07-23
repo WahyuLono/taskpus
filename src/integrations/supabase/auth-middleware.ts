@@ -2,7 +2,7 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest, getRequestHeader, setResponseHeader, setResponseHeaders } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { parseCookie, stringifySetCookie } from 'cookie'
 import type { Database } from './types'
 
@@ -62,7 +62,7 @@ function createRequestCookieAdapter(request: Request) {
       return [...cookieMap.entries()].map(([name, value]) => ({ name, value }));
     },
     setAll(
-      cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[],
+      cookiesToSet: { name: string; value: string; options: CookieOptions }[],
       headers: Record<string, string>,
     ) {
       setResponseHeaders(headers);
