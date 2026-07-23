@@ -47,6 +47,8 @@ export function useCurrentUser() {
     queryFn: () => fetchMe(),
     enabled: ready && !!userId,
     staleTime: 60_000,
+    retry: false,
+    throwOnError: false,
   });
   // isReady = we know either the profile or that there's no session at all.
   // While false, callers should show a skeleton instead of falling back to

@@ -34,6 +34,11 @@ const TIPE_ICON: Record<string, { icon: string; cls: string }> = {
   lpd_rejected: { icon: "cancel", cls: "bg-destructive/15 text-destructive" },
 };
 
+function isAuthError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("unauthorized");
+}
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -46,16 +51,34 @@ export function NotificationBell() {
 
   const unreadQ = useQuery({
     queryKey: ["notifikasi-unread", userId],
-    queryFn: () => fetchUnread(),
+    queryFn: async () => {
+      try {
+        return await fetchUnread();
+      } catch (error) {
+        if (isAuthError(error)) return { count: 0 };
+        throw error;
+      }
+    },
     enabled: ready && !!userId,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
+    retry: false,
+    throwOnError: false,
   });
 
   const listQ = useQuery({
     queryKey: ["notifikasi-list", "dropdown", userId],
-    queryFn: () => fetchList({ data: { page: 1, pageSize: 8, unreadOnly: false } }),
+    queryFn: async () => {
+      try {
+        return await fetchList({ data: { page: 1, pageSize: 8, unreadOnly: false } });
+      } catch (error) {
+        if (isAuthError(error)) return { rows: [], total: 0, page: 1, pageSize: 8 };
+        throw error;
+      }
+    },
     enabled: open && ready && !!userId,
+    retry: false,
+    throwOnError: false,
   });
 
   const markOneM = useMutation({
