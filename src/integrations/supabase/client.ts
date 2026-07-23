@@ -46,7 +46,7 @@ function createSupabaseClient() {
 
   const storageKey = getStorageKey(SUPABASE_URL);
 
-  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  const client = createBrowserClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     cookieOptions: {
       path: '/',
       sameSite: 'lax',
@@ -60,9 +60,15 @@ function createSupabaseClient() {
               return getBrowserCookiesWithLegacySession(storageKey);
             },
             setAll(cookiesToSet) {
+              const touchesAuthCookie = cookiesToSet.some(
+                ({ name }) => name === storageKey || name.startsWith(`${storageKey}.`),
+              );
               cookiesToSet.forEach(({ name, value, options }) => {
                 document.cookie = stringifySetCookie({ name, value, ...options });
               });
+              if (touchesAuthCookie) {
+                window.localStorage.removeItem(storageKey);
+              }
             },
           },
     auth: {
@@ -72,6 +78,26 @@ function createSupabaseClient() {
       flowType: 'pkce',
     },
   });
+
+  if (typeof window !== 'undefined' && window.localStorage.getItem(storageKey)) {
+    queueMicrotask(() => {
+      client.auth
+        .getSession()
+        .then(({ data }) => {
+          if (data.session?.access_token && data.session.refresh_token) {
+            return client.auth.setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            });
+          }
+        })
+        .catch(() => {
+          // If the legacy cache is invalid, keep the normal auth flow in charge.
+        });
+    });
+  }
+
+  return client;
 }
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
