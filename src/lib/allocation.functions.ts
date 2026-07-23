@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase
@@ -33,6 +32,7 @@ export const listAllocations = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ListSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let q = (supabaseAdmin as any)
       .from("nomor_surat_allocation")
       .select("*")
@@ -60,6 +60,7 @@ export const createAllocation = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CreateSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: ok, error: vErr } = await (supabaseAdmin as any).rpc(
       "validate_allocation_range",
@@ -100,6 +101,7 @@ export const updateAllocation = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => UpdateSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: cur, error: loadErr } = await (supabaseAdmin as any)
       .from("nomor_surat_allocation")
@@ -154,6 +156,7 @@ export const deleteAllocation = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: cur, error: loadErr } = await (supabaseAdmin as any)
       .from("nomor_surat_allocation")

@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type CurrentUser = {
   id_user: string;
@@ -56,6 +55,7 @@ export const updateOwnUsername = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ username: UsernameSchema }).parse(d))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const newUsername = data.username;
 
     // Cek unik (case-insensitive)

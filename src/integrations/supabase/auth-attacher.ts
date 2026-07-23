@@ -6,18 +6,25 @@ import { supabase } from './client'
 // the browser never attaches the bearer token to serverFn RPCs.
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
+    if (typeof window === 'undefined') {
+      return next()
+    }
+
     let token: string | undefined
     try {
       // Prefer getSession() — synchronous read from localStorage, does not
       // hit the network and is safe to call on every RPC.
       const { data } = await supabase.auth.getSession()
-      token = data.session?.access_token
+      let session = data.session
       // If the persisted session expired while the tab was open, refresh it
       // so we don't fire a request with a stale bearer that the server rejects.
-      if (data.session?.expires_at && data.session.expires_at * 1000 < Date.now() + 5_000) {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        token = refreshed.session?.access_token ?? token
+      if (session?.expires_at && session.expires_at * 1000 < Date.now() + 30_000) {
+        const { data: refreshed, error } = await supabase.auth.refreshSession()
+        if (!error && refreshed.session) {
+          session = refreshed.session
+        }
       }
+      token = session?.access_token
     } catch (err) {
       console.warn('[attachSupabaseAuth] failed to read session', err)
     }
