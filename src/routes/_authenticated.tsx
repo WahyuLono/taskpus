@@ -145,7 +145,7 @@ function AuthLayout() {
                 </div>
                 <div className="hidden md:flex flex-col items-start leading-tight">
                   <span className="text-sm font-semibold text-on-surface">
-                    {isLoading ? "Memuat…" : (me?.nama ?? "Pengguna")}
+                    {!isReady ? "Memuat…" : (me?.nama ?? "Pengguna")}
                   </span>
                   <div className="flex items-center gap-1">
                     {me?.role_user && (
