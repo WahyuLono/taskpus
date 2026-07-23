@@ -10,9 +10,9 @@ export function useSession() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getUser().then(({ data }) => {
       if (!mounted) return;
-      setUserId(data.session?.user.id ?? null);
+      setUserId(data.user?.id ?? null);
       setReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {

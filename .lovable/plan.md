@@ -1,33 +1,30 @@
-## Masalah
+## Rencana Perbaikan
 
-Di custom domain (`taskpus.lovable.app`), sebagian panggilan server function masuk ke peladen **tanpa** header `Authorization: Bearer <token>`, sehingga `requireSupabaseAuth` menolak / role dianggap non-admin. Preview jarang kena karena timing hydration berbeda.
+1. **Ubah Supabase browser client ke cookie-based session**
+   - Tambahkan dependency `@supabase/ssr`.
+   - Ganti konfigurasi `src/integrations/supabase/client.ts` dari storage `localStorage` ke `createBrowserClient(...)` agar sesi Supabase ditulis ke HTTP cookies.
+   - Pertahankan API import yang sama (`supabase`) supaya komponen yang ada tidak perlu diubah besar-besaran.
 
-Penyebab pada `src/integrations/supabase/auth-attacher.ts`:
+2. **Perkuat middleware pengirim token pada Server Functions**
+   - Perbarui `src/integrations/supabase/auth-attacher.ts` supaya tetap mengirim `Authorization: Bearer <token>` untuk setiap `createServerFn`.
+   - Token diambil dari sesi Supabase yang sekarang tersinkron melalui cookie, dengan refresh proaktif saat hampir kedaluwarsa.
+   - Jika sesi belum siap saat hydration/window focus, beri retry singkat sebelum request dilepas.
 
-```ts
-const { data } = await supabase.auth.getSession()
-const token = data.session?.access_token
-return next({ headers: token ? { Authorization: `Bearer ${token}` } : {} })
-```
+3. **Perkuat middleware server agar tidak hanya bergantung pada header**
+   - Perbarui `src/integrations/supabase/auth-middleware.ts`.
+   - Alur utama tetap membaca `Authorization` header.
+   - Jika header tidak ada, middleware akan membaca cookie Supabase dari request Cloudflare Worker menggunakan `@supabase/ssr` server client.
+   - Setelah user valid, middleware tetap membuat Supabase client server-side yang membawa bearer token user, sehingga RLS dan role Admin/Petugas tetap benar.
 
-Tiga celah:
-1. `getSession()` hanya membaca cache in-memory / localStorage. Saat token **sudah expired** (umum di produksi karena tab lama), `access_token` masih ada tapi ditolak server → user "kehilangan" role.
-2. Kalau `getSession()` return `null` (race saat awal load / storage belum siap), header sengaja **dikosongkan** → request jalan sebagai anon.
-3. Tidak ada retry / refresh sebelum request dikirim.
+4. **Rapikan guard sesi di route/hook yang rawan race**
+   - `/_authenticated` dan `/login` menggunakan `supabase.auth.getUser()` atau sesi cookie-backed yang valid, bukan sekadar cache localStorage.
+   - `useSession()` tetap mendengar `onAuthStateChange`, tetapi sumber sesi sudah cookie-backed sehingga refetch/window focus tidak membuat user turun menjadi guest.
 
-## Perbaikan
+5. **Kurangi refetch auth yang terlalu agresif**
+   - Di `src/routes/__root.tsx`, filter event auth hanya untuk `SIGNED_IN`, `SIGNED_OUT`, dan `USER_UPDATED`.
+   - Hindari invalidasi query pada event seperti `INITIAL_SESSION` atau `TOKEN_REFRESHED` agar tidak memicu request Server Function terlalu dini/berulang saat token sedang refresh.
 
-Perbarui **hanya** `src/integrations/supabase/auth-attacher.ts` agar selalu mengirim token yang valid:
-
-1. Panggil `supabase.auth.getSession()`.
-2. Jika `expires_at` sudah lewat / < 60 detik lagi kedaluwarsa → panggil `supabase.auth.refreshSession()` dan pakai token hasil refresh.
-3. Jika masih tidak ada token setelah refresh, coba `getSession()` sekali lagi (menangani race saat hydration di custom domain).
-4. Kirim `Authorization: Bearer <token>` bila ada; jika benar-benar tidak ada sesi, biarkan kosong (memang guest).
-
-Tidak mengubah `start.ts` (middleware sudah terdaftar), tidak mengubah `requireSupabaseAuth`, tidak mengubah komponen. Ini murni memperkuat sisi klien agar token yang dikirim selalu segar dan tidak hilang karena race.
-
-## Verifikasi
-
-- Buka `/dashboard` di custom domain sebagai Admin → menu Master & tombol "Edit SPT" tetap muncul setelah reload keras.
-- Biarkan tab idle > 1 jam lalu klik menu → tidak ada "Forbidden: hanya Admin" karena token akan di-refresh otomatis sebelum request.
-- Login sebagai Petugas → tidak muncul menu Admin (perilaku lama tetap benar).
+6. **Verifikasi**
+   - Login sebagai Admin di custom domain/production.
+   - Hard refresh `/dashboard`, pindah tab lalu fokus kembali, dan buka fitur yang memanggil Server Functions seperti notifikasi, daftar LPD, master data, dan buat SPT.
+   - Pastikan tidak ada error `Unauthorized: No authorization header provided` dan role tetap Admin/Petugas sesuai data `master_user`.

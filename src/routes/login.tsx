@@ -12,8 +12,8 @@ import logoPuskesmas from "@/assets/logo-puskesmas.png";
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
+    const { data } = await supabase.auth.getUser();
+    if (data.user) throw redirect({ to: "/dashboard" });
   },
   component: LoginPage,
 });

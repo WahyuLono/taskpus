@@ -27,9 +27,18 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
 
       if (!session) {
         // Hydration race: storage may not have been read yet on first render.
-        await new Promise((r) => setTimeout(r, 50))
+        await new Promise((r) => setTimeout(r, 100))
         const retry = await supabase.auth.getSession()
         session = retry.data.session
+      }
+
+      if (session) {
+        // Keep cookie-backed storage and in-memory auth state fresh before RPC.
+        const userCheck = await supabase.auth.getUser(session.access_token)
+        if (userCheck.error) {
+          const { data: refreshed } = await supabase.auth.refreshSession()
+          session = refreshed.session ?? session
+        }
       }
 
       token = session?.access_token
