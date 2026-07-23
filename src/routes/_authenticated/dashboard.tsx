@@ -12,11 +12,11 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function DashboardPage() {
-  const { data: me } = useCurrentUser();
+  const { data: me, isReady } = useCurrentUser();
   const fetchStats = useServerFn(getDashboardStats);
   const fetchList = useServerFn(listLpd);
 
-  const enabled = !!me;
+  const enabled = isReady && !!me;
   const stats = useQuery({ queryKey: ["stats"], queryFn: () => fetchStats(), enabled });
   const recent = useQuery({
     queryKey: ["lpd-recent"],
