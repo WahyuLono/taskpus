@@ -38,22 +38,24 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { ready, userId } = useSession();
   const fetchList = useServerFn(listNotifikasi);
   const fetchUnread = useServerFn(countUnreadNotifikasi);
   const markOne = useServerFn(markNotifikasiRead);
   const markAll = useServerFn(markAllNotifikasiRead);
 
   const unreadQ = useQuery({
-    queryKey: ["notifikasi-unread"],
+    queryKey: ["notifikasi-unread", userId],
     queryFn: () => fetchUnread(),
+    enabled: ready && !!userId,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
 
   const listQ = useQuery({
-    queryKey: ["notifikasi-list", "dropdown"],
+    queryKey: ["notifikasi-list", "dropdown", userId],
     queryFn: () => fetchList({ data: { page: 1, pageSize: 8, unreadOnly: false } }),
-    enabled: open,
+    enabled: open && ready && !!userId,
   });
 
   const markOneM = useMutation({
