@@ -1,30 +1,22 @@
-## Diagnosis
+## Rencana Perbaikan
 
-Screenshot berasal dari domain published `taskpus.lovable.app`, sedangkan di editor/preview (`id-preview--…lovable.app`) sudah benar. Bukti dari worker logs & network:
+1. **Pulihkan agar render tidak bisa dijatuhkan oleh notifikasi**
+  - Ubah `NotificationBell` supaya query `countUnreadNotifikasi` dan `listNotifikasi` hanya aktif jika session benar-benar siap dan ada user.
+  - Tambahkan handling error lokal pada query notifikasi: jika server function mengembalikan `Unauthorized`, lonceng tidak melempar error ke React tree; badge cukup dianggap `0` dan dropdown menampilkan state aman.
+2. **Perbaiki mekanisme attachment token Supabase**
+  - Tinjau `attachSupabaseAuth` agar aman di semua fase TanStack Start, terutama saat callback `.client()` berjalan sebelum browser/session siap.
+  - Pastikan akses ke Supabase/localStorage tidak menyebabkan exception yang tidak tertangkap.
+  - Jika token belum tersedia, server function protected tidak dipanggil dari komponen yang belum siap, bukan dipanggil tanpa header.
+3. **Perbaiki middleware server agar Unauthorized tidak memicu blank screen**
+  - Sesuaikan `requireSupabaseAuth` agar error auth dilempar sebagai `Response` 401 yang terkontrol, bukan `Error` biasa yang dapat terangkat menjadi runtime crash di UI.
+  - Pertahankan validasi ketat: tanpa bearer token tetap ditolak, tetapi tidak merusak render seluruh aplikasi.
+4. **Rapikan import server-only yang berisiko**
+  - Di `src/lib/me.functions.ts`, ada import `supabaseAdmin` di module scope pada file server function. Ini tidak ideal untuk TanStack Start dan bisa memperbesar risiko runtime/bundle issue.
+  - Pindahkan import admin client ke dalam handler yang memang memerlukannya, sesuai pola aman server function.
+5. **Validasi setelah implementasi**
+  - Buka halaman `/dashboard` dan `/lpd` di preview.
+  - Pastikan tidak blank screen.
+  - Pastikan request `getCurrentUser`, `listLpd`, dan notifikasi membawa header Authorization ketika session ada.
+  - Pastikan jika session belum siap/expired, aplikasi tetap render dan diarahkan/login secara normal, bukan crash.
 
-- Published worker logs 1 jam terakhir hanya berisi `GET /` — **tidak ada** panggilan `/_serverFn/…` ke `getCurrentUser` sama sekali.
-- Semua request `/_serverFn/…getCurrentUser` yang berhasil (mengembalikan `role_user: "Admin"`) berasal dari origin `id-preview--27bf0ac9-…lovable.app`, bukan dari `taskpus.lovable.app`.
-
-Kesimpulan: bundle JS yang dilayani `taskpus.lovable.app` masih versi **sebelum** 4 perbaikan (AuthSync + `isReady` + skeleton + invalidate saat login). Deployment published belum di-refresh, jadi klien lama tetap menampilkan fallback "Pengguna" tanpa pernah menunggu profil.
-
-Tidak ada bug baru di kode. Perbaikan sudah benar; yang belum terjadi adalah **publish ulang**.
-
-## Rencana
-
-1. **Publish ulang aplikasi** ke `taskpus.lovable.app` melalui tombol Publish (opsi "Republish"). Ini yang akan menyalurkan 4 perbaikan tadi ke domain published.
-2. **Setelah publish selesai**, di browser klien:
-  - Hard-refresh `taskpus.lovable.app/dashboard` (Ctrl/Cmd+Shift+R) untuk memaksa bundle baru terunduh (service worker / cache lama sering menahan bundle sebelumnya).
-  - Verifikasi network: harus muncul `GET /_serverFn/…` yang mengembalikan `role_user: "Admin"`.
-3. **Jika setelah republish + hard refresh masih tampil "Pengguna"**, baru kita masuk ke investigasi lanjutan (kemungkinan: perbedaan env `VITE_SUPABASE_*` antara build editor vs build published, atau CSP/CORS yang memblokir `/_serverFn` di domain published). Untuk itu saya perlu:
-  - Log worker published setelah hard refresh (harus ada request ke `/_serverFn/…`).
-  - Screenshot Network tab (khususnya request ke `/_serverFn/…getCurrentUser` beserta status & response).
-
-## Yang TIDAK saya ubah
-
-- Tidak ada perubahan kode, migrasi DB, RLS, atau server function di rencana ini — semuanya sudah benar di sisi source. Perbaikan hanya perlu di-*ship* ke published.
-
-## Aksi berikutnya dari Anda
-
-Silakan klik **Publish** untuk republish, lalu hard-refresh `taskpus.lovable.app`. Kalau setelah itu masalah masih ada, kirim screenshot Network tab request `/_serverFn/…` dari domain published — saya akan lanjut diagnosa dengan log worker published (`stack_modern--server-function-logs`).
-
-jawaban saya : justru ini sudah saya republish + hard refresh, dan masih menampilkan sebagai pengguna
+Rencana perbaikan yang sangat bagus dan komprehensif. Silakan eksekusi seluruh 5 poin rencana tersebut sekarang juga. Pastikan UI merespons dengan aman (graceful) dan tidak ada lagi unhandled exception yang membuat layar menjadi blank putih.
