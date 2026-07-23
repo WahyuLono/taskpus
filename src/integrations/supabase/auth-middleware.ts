@@ -61,14 +61,26 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     }
 
     const authHeader = request.headers.get('authorization');
+    const cookieHeader = request.headers.get('cookie') ?? '';
     let token = authHeader?.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : '';
+
+    const parsedCookies = parseCookie(cookieHeader);
+    const supabaseCookieNames = Object.keys(parsedCookies).filter((n) => n.startsWith('sb-'));
+
+    // Diagnostic (temporary): reveal what actually arrives at the Worker.
+    console.log('[auth-mw] diag', {
+      hasAuthHeader: !!authHeader,
+      authHeaderScheme: authHeader?.split(' ')[0],
+      cookieHeaderLen: cookieHeader.length,
+      supabaseCookieNames,
+      url: request.url,
+    });
 
     if (authHeader && !authHeader.startsWith('Bearer ')) {
       throw new Error('Unauthorized: Only Bearer tokens are supported');
     }
 
     if (!token) {
-      const parsedCookies = parseCookie(request.headers.get('cookie') ?? '');
       const supabaseFromCookies = createServerClient<Database>(
         SUPABASE_URL!,
         SUPABASE_PUBLISHABLE_KEY!,
@@ -100,29 +112,41 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
         },
       );
 
-      const { data: cookieClaims, error: cookieClaimsError } = await supabaseFromCookies.auth.getClaims();
-      if (cookieClaimsError || !cookieClaims?.claims?.sub) {
-        throw new Error('Unauthorized: No authorization header provided');
+      // Use getUser() — more tolerant of publishable-key formats than getClaims()
+      // and reflects the real auth-server verdict.
+      const { data: userData, error: userError } = await supabaseFromCookies.auth.getUser();
+      if (userError || !userData?.user) {
+        console.log('[auth-mw] cookie-getUser failed', {
+          message: userError?.message,
+          status: (userError as { status?: number } | null)?.status,
+          hadSupabaseCookies: supabaseCookieNames.length > 0,
+        });
+        throw new Error(
+          supabaseCookieNames.length === 0
+            ? 'Unauthorized: No authorization header or auth cookie'
+            : `Unauthorized: cookie session invalid (${userError?.message ?? 'unknown'})`,
+        );
       }
 
       const { data: cookieSession } = await supabaseFromCookies.auth.getSession();
       token = cookieSession.session?.access_token ?? '';
-    }
-
-    if (!token) {
-      throw new Error('Unauthorized: No token provided');
+      if (!token) {
+        throw new Error('Unauthorized: cookie session had no access_token');
+      }
     }
 
     const supabase = createUserScopedClient(SUPABASE_URL!, SUPABASE_PUBLISHABLE_KEY!, token);
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
-      throw new Error('Unauthorized: Invalid token');
+      console.log('[auth-mw] getClaims failed', { message: error?.message });
+      throw new Error(`Unauthorized: Invalid token (${error?.message ?? 'no claims'})`);
     }
 
     if (!data.claims.sub) {
       throw new Error('Unauthorized: No user ID found in token');
     }
+
 
     return next({
       context: {
