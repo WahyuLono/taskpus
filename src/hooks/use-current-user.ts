@@ -11,16 +11,14 @@ export function useSession() {
   useEffect(() => {
     let mounted = true;
 
-    // Prefer getUser() — validates the token with Supabase Auth — falling back
-    // to the local session if the server call fails (e.g. offline).
+    // Read the persisted session directly — this is a fast, local, offline-safe
+    // lookup. Avoid supabase.auth.getUser() here: it hits the network and, when
+    // it fails (CORS, cold start on the published domain, transient 5xx from
+    // Supabase Auth), can resolve with { user: null } and blank out the userId
+    // we actually have in localStorage — leaving the profile query disabled
+    // and the UI stuck on the "Pengguna" fallback. Token validation still
+    // happens server-side inside every requireSupabaseAuth server function.
     (async () => {
-      const { data: userData, error } = await supabase.auth.getUser();
-      if (!mounted) return;
-      if (!error && userData.user) {
-        setUserId(userData.user.id);
-        setReady(true);
-        return;
-      }
       const { data: sess } = await supabase.auth.getSession();
       if (!mounted) return;
       setUserId(sess.session?.user.id ?? null);
@@ -28,6 +26,7 @@ export function useSession() {
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!mounted) return;
       setUserId(session?.user.id ?? null);
       setReady(true);
     });

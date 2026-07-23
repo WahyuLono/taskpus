@@ -1,39 +1,30 @@
-## Masalah
+## Diagnosis
 
-Login sebagai `admin` (email `admin@lpd.internal`, id `969e808c…`) sukses dan server function `getCurrentUser` mengembalikan `role_user = "Admin"` dengan benar (dicek langsung di network log 07:09:08Z). RLS `master_user` juga sudah membolehkan user membaca baris miliknya sendiri (`auth.uid() = id_user`) — jadi bukan masalah role check maupun RLS.
+Screenshot berasal dari domain published `taskpus.lovable.app`, sedangkan di editor/preview (`id-preview--…lovable.app`) sudah benar. Bukti dari worker logs & network:
 
-Namun UI menampilkan dashboard "pengguna biasa" (header "Pengguna", tanpa tombol "Buat SPT Baru", sidebar tanpa menu admin, kartu Kapasitas tidak muncul). Ini terjadi karena `me` di komponen bernilai `undefined` pada saat render — masalah **cache & race di TanStack Query**, bukan di database.
+- Published worker logs 1 jam terakhir hanya berisi `GET /` — **tidak ada** panggilan `/_serverFn/…` ke `getCurrentUser` sama sekali.
+- Semua request `/_serverFn/…getCurrentUser` yang berhasil (mengembalikan `role_user: "Admin"`) berasal dari origin `id-preview--27bf0ac9-…lovable.app`, bukan dari `taskpus.lovable.app`.
 
-## Akar Masalah
+Kesimpulan: bundle JS yang dilayani `taskpus.lovable.app` masih versi **sebelum** 4 perbaikan (AuthSync + `isReady` + skeleton + invalidate saat login). Deployment published belum di-refresh, jadi klien lama tetap menampilkan fallback "Pengguna" tanpa pernah menunggu profil.
 
-`useSession` (di `src/hooks/use-current-user.ts`) mulai dengan `userId = null`, lalu baru mengisi lewat `useEffect`. `useCurrentUser` memakai `["current-user", userId]` sebagai key — jadi query yang pertama kali dibuat memakai key `["current-user", null]` dan `enabled: false`. Ketika session muncul, query key berpindah ke `["current-user", <adminId>]`, tapi:
+Tidak ada bug baru di kode. Perbaikan sudah benar; yang belum terjadi adalah **publish ulang**.
 
-- Tidak ada listener `onAuthStateChange` di root yang memanggil `queryClient.invalidateQueries()` — sisa cache dari sesi lama (mis. `ais@lpd.internal`) bisa tersaji sekejap.
-- `getSession()` yang dipakai `useSession` dan `_authenticated`'s `beforeLoad` kadang mengembalikan session lama sebelum sinkron; sebaiknya pakai `getUser()` untuk identitas.
-- `useSession`/`useCurrentUser` tidak menyediakan flag "profile siap" ke komponen, jadi UI merender fallback ("Pengguna") sebagai kondisi normal alih-alih skeleton.
+## Rencana
 
-## Solusi
+1. **Publish ulang aplikasi** ke `taskpus.lovable.app` melalui tombol Publish (opsi "Republish"). Ini yang akan menyalurkan 4 perbaikan tadi ke domain published.
+2. **Setelah publish selesai**, di browser klien:
+  - Hard-refresh `taskpus.lovable.app/dashboard` (Ctrl/Cmd+Shift+R) untuk memaksa bundle baru terunduh (service worker / cache lama sering menahan bundle sebelumnya).
+  - Verifikasi network: harus muncul `GET /_serverFn/…` yang mengembalikan `role_user: "Admin"`.
+3. **Jika setelah republish + hard refresh masih tampil "Pengguna"**, baru kita masuk ke investigasi lanjutan (kemungkinan: perbedaan env `VITE_SUPABASE_*` antara build editor vs build published, atau CSP/CORS yang memblokir `/_serverFn` di domain published). Untuk itu saya perlu:
+  - Log worker published setelah hard refresh (harus ada request ke `/_serverFn/…`).
+  - Screenshot Network tab (khususnya request ke `/_serverFn/…getCurrentUser` beserta status & response).
 
-Perbaikan murni di frontend/hook (tidak ada perubahan schema, RPC, atau RLS — sudah benar):
+## Yang TIDAK saya ubah
 
-1. `**src/hooks/use-current-user.ts**`
-  - Ekspor status `isReady` gabungan: `sessionReady && (query.isSuccess || query.isError)`.
-  - Ganti `supabase.auth.getSession()` menjadi `getUser()` di dalam `useSession()` untuk memastikan identitas yang divalidasi server (fallback ke `getSession()` bila offline).
-  - Tetap invalidate query saat `onAuthStateChange` mengeluarkan `SIGNED_IN`/`SIGNED_OUT`/`USER_UPDATED` (untuk hook lokal).
-2. `**src/routes/__root.tsx**` — tambah satu listener global `onAuthStateChange`:
-  - Pada `SIGNED_IN` / `USER_UPDATED`: `queryClient.invalidateQueries({ queryKey: ["current-user"] })` + `router.invalidate()`.
-  - Pada `SIGNED_OUT`: `queryClient.removeQueries({ queryKey: ["current-user"] })` supaya profil lama tidak menempel di sesi baru.
-  - Filter event agar tidak refetch di `TOKEN_REFRESHED` / `INITIAL_SESSION` (mencegah storm).
-3. `**src/routes/login.tsx**` — setelah `signInWithPassword` sukses, panggil `queryClient.invalidateQueries({ queryKey: ["current-user"] })` sebelum `navigate({ to: "/dashboard" })`, supaya dashboard mendapat data segar sejak render pertama.
-4. `**src/routes/_authenticated/dashboard.tsx` & `src/routes/_authenticated.tsx**` — tampilkan skeleton/placeholder saat `!isReady` (bukan langsung fallback "Pengguna" & sidebar non-admin). Hindari flash of non-admin UI.
+- Tidak ada perubahan kode, migrasi DB, RLS, atau server function di rencana ini — semuanya sudah benar di sisi source. Perbaikan hanya perlu di-*ship* ke published.
 
-## Verifikasi
+## Aksi berikutnya dari Anda
 
-- Hard-refresh sebagai `admin` → header langsung "Administrator", sidebar berisi "Buat SPT" & "Data Master", tombol "Buat SPT Baru" muncul, kartu "Kapasitas Supabase" tampil.
-- Logout → login sebagai petugas (mis. `ais`) → UI non-admin, tidak ada bocor menu admin.
-- Logout dari petugas → login sebagai `admin` di tab yang sama tanpa refresh → UI langsung admin (bukti cache berhasil di-invalidate).
-- Buka `/master` & `/lpd/baru` sebagai admin → tidak ada redirect "Halaman ini hanya untuk Admin".
+Silakan klik **Publish** untuk republish, lalu hard-refresh `taskpus.lovable.app`. Kalau setelah itu masalah masih ada, kirim screenshot Network tab request `/_serverFn/…` dari domain published — saya akan lanjut diagnosa dengan log worker published (`stack_modern--server-function-logs`).
 
-Tidak ada migrasi DB, tidak ada perubahan pada RLS `master_user`, dan tidak ada perubahan pada `getCurrentUser` server function.
-
-Jawaban saya : Tolong terapkan seluruh 4 solusi perbaikan frontend dan TanStack Query tersebut sekarang.
+jawaban saya : justru ini sudah saya republish + hard refresh, dan masih menampilkan sebagai pengguna
