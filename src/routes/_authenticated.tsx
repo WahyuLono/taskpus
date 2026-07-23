@@ -22,7 +22,6 @@ import {
 import { NotificationBell } from "@/components/notifikasi/notification-bell";
 
 export const Route = createFileRoute("/_authenticated")({
-  ssr: false,
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
@@ -42,7 +41,7 @@ const NAV: NavItem[] = [
 ];
 
 function AuthLayout() {
-  const { data: me, isReady } = useCurrentUser();
+  const { data: me, isLoading } = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,9 +49,7 @@ function AuthLayout() {
   useEffect(() => setSidebarOpen(false), [location.pathname]);
 
   const isAdmin = me?.role_user === "Admin";
-  // While the profile is still loading, hide role-gated items instead of
-  // showing them or the non-admin subset — prevents a flash of the wrong nav.
-  const visible = isReady ? NAV.filter((n) => !n.adminOnly || isAdmin) : [];
+  const visible = NAV.filter((n) => !n.adminOnly || isAdmin);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -146,7 +143,7 @@ function AuthLayout() {
                 </div>
                 <div className="hidden md:flex flex-col items-start leading-tight">
                   <span className="text-sm font-semibold text-on-surface">
-                    {!isReady ? "Memuat…" : (me?.nama ?? "Pengguna")}
+                    {isLoading ? "Memuat…" : (me?.nama ?? "Pengguna")}
                   </span>
                   <div className="flex items-center gap-1">
                     {me?.role_user && (

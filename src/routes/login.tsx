@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLoginEmail } from "@/lib/auth.functions";
@@ -21,7 +20,6 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const resolve = useServerFn(resolveLoginEmail);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -48,9 +46,6 @@ function LoginPage() {
         toast.error("Login gagal", { description: error.message });
         return;
       }
-      // Ensure fresh profile fetch for the new session before landing on dashboard.
-      qc.removeQueries({ queryKey: ["current-user"] });
-      await qc.invalidateQueries({ queryKey: ["current-user"] });
       toast.success("Login berhasil");
       navigate({ to: "/dashboard" });
     } finally {

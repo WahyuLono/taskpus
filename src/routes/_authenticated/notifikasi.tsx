@@ -8,7 +8,6 @@ import {
   markAllNotifikasiRead,
 } from "@/lib/notifikasi.functions";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { useSession } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/notifikasi")({
   component: NotifikasiPage,
@@ -22,13 +21,6 @@ const TIPE_ICON: Record<string, { icon: string; cls: string }> = {
   lpd_rejected: { icon: "cancel", cls: "bg-destructive/15 text-destructive" },
 };
 
-function isAuthError(error: unknown): boolean {
-  if (error instanceof Response && error.status === 401) return true;
-  if (error && typeof error === "object" && "status" in error && error.status === 401) return true;
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  return message.toLowerCase().includes("unauthorized");
-}
-
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 60) return "baru saja";
@@ -41,7 +33,6 @@ function timeAgo(iso: string): string {
 function NotifikasiPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { ready, userId } = useSession();
   const [page, setPage] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const fetchList = useServerFn(listNotifikasi);
@@ -49,19 +40,10 @@ function NotifikasiPage() {
   const markAll = useServerFn(markAllNotifikasiRead);
 
   const q = useQuery({
-    queryKey: ["notifikasi-list", "page", page, unreadOnly, userId],
-    queryFn: async () => {
-      try {
-        return await fetchList({ data: { page, pageSize: PAGE_SIZE, unreadOnly } });
-      } catch (error) {
-        if (isAuthError(error)) return { rows: [], total: 0, page, pageSize: PAGE_SIZE };
-        throw error;
-      }
-    },
-    enabled: ready && !!userId,
+    queryKey: ["notifikasi-list", "page", page, unreadOnly],
+    queryFn: () =>
+      fetchList({ data: { page, pageSize: PAGE_SIZE, unreadOnly } }),
     placeholderData: keepPreviousData,
-    retry: false,
-    throwOnError: false,
   });
 
   const markOneM = useMutation({

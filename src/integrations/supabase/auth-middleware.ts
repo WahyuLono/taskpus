@@ -6,11 +6,6 @@ import type { Database } from './types'
 
 
 
-function unauthorized(message: string): Response {
-  console.warn(`[Supabase] ${message}`);
-  return new Response('Unauthorized', { status: 401 });
-}
-
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     
@@ -30,22 +25,22 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     const request = getRequest();
 
     if (!request?.headers) {
-      throw unauthorized('Unauthorized: No request headers available');
+      throw new Error('Unauthorized: No request headers available');
     }
 
     const authHeader = request.headers.get('authorization');
 
     if (!authHeader) {
-      throw unauthorized('Unauthorized: No authorization header provided');
+      throw new Error('Unauthorized: No authorization header provided');
     }
 
     if (!authHeader.startsWith('Bearer ')) {
-      throw unauthorized('Unauthorized: Only Bearer tokens are supported');
+      throw new Error('Unauthorized: Only Bearer tokens are supported');
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (!token) {
-      throw unauthorized('Unauthorized: No token provided');
+      throw new Error('Unauthorized: No token provided');
     }
 
     const supabase = createClient<Database>(
@@ -67,11 +62,11 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
-      throw unauthorized('Unauthorized: Invalid token');
+      throw new Error('Unauthorized: Invalid token');
     }
 
     if (!data.claims.sub) {
-      throw unauthorized('Unauthorized: No user ID found in token');
+      throw new Error('Unauthorized: No user ID found in token');
     }
 
     return next({

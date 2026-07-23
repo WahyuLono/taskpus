@@ -129,14 +129,9 @@ function AuthSync() {
   const qc = useQueryClient();
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
-        return;
-      }
       if (event === "SIGNED_OUT") {
-        qc.removeQueries({ queryKey: ["current-user"] });
         qc.clear();
       } else {
-        qc.invalidateQueries({ queryKey: ["current-user"] });
         qc.invalidateQueries();
       }
       router.invalidate();
