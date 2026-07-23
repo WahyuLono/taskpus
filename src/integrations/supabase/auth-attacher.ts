@@ -4,10 +4,39 @@ import { supabase } from './client'
 
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
 // the browser never attaches the bearer token to serverFn RPCs.
+//
+// Hardened for custom-domain / long-lived tabs:
+// 1. Refresh the session proactively when it's expired or expires within 60s.
+// 2. Retry getSession() once if we come up empty (hydration race on custom domain).
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
+    let token: string | undefined
+
+    try {
+      const { data } = await supabase.auth.getSession()
+      let session = data.session
+
+      const nowSec = Math.floor(Date.now() / 1000)
+      const expiresAt = session?.expires_at ?? 0
+      const needsRefresh = !!session && expiresAt > 0 && expiresAt - nowSec < 60
+
+      if (needsRefresh) {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        session = refreshed.session ?? session
+      }
+
+      if (!session) {
+        // Hydration race: storage may not have been read yet on first render.
+        await new Promise((r) => setTimeout(r, 50))
+        const retry = await supabase.auth.getSession()
+        session = retry.data.session
+      }
+
+      token = session?.access_token
+    } catch {
+      // Fall through with no token; server middleware will reject if auth is required.
+    }
+
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

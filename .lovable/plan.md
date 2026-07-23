@@ -1,42 +1,33 @@
+## Masalah
 
-## Rencana Eksekusi
+Di custom domain (`taskpus.lovable.app`), sebagian panggilan server function masuk ke peladen **tanpa** header `Authorization: Bearer <token>`, sehingga `requireSupabaseAuth` menolak / role dianggap non-admin. Preview jarang kena karena timing hydration berbeda.
 
-### Fase 1 — Reset data (tanpa migration; via insert tool + Storage API)
+Penyebab pada `src/integrations/supabase/auth-attacher.ts`:
 
-1. **Hapus semua file di bucket `laporan_lpd`** — via server function sekali-pakai yang memanggil `supabaseAdmin.storage.from('laporan_lpd').list()` rekursif lalu `.remove()`. (Bucket tetap ada, isinya kosong.)
-2. **Hapus baris DB** (via insert tool, urutan menghindari FK):
-   - `DELETE FROM public.notifikasi;`
-   - `DELETE FROM public.detail_petugas;`
-   - `DELETE FROM public.transaksi_lpd;`
-3. **Reset semua alokasi**: `UPDATE public.nomor_surat_allocation SET last_used_number = range_start - 1;` — definisi range dipertahankan, tapi counter kembali ke titik awal.
+```ts
+const { data } = await supabase.auth.getSession()
+const token = data.session?.access_token
+return next({ headers: token ? { Authorization: `Bearer ${token}` } : {} })
+```
 
-### Fase 2 — Ubah format ke 4 digit (via migration)
+Tiga celah:
+1. `getSession()` hanya membaca cache in-memory / localStorage. Saat token **sudah expired** (umum di produksi karena tab lama), `access_token` masih ada tapi ditolak server → user "kehilangan" role.
+2. Kalau `getSession()` return `null` (race saat awal load / storage belum siap), header sengaja **dikosongkan** → request jalan sebagai anon.
+3. Tidak ada retry / refresh sebelum request dikirim.
 
-4. `CREATE OR REPLACE FUNCTION public.create_lpd_baru(...)` — sama persis dengan versi sekarang, hanya mengganti:
-   - `lpad(v_nomor::text, 5, '0')` → `lpad(v_nomor::text, 4, '0')` di `v_no_surat`
-   - `lpad(v_nomor::text, 5, '0')` → `lpad(v_nomor::text, 4, '0')` di `v_no_surat_slug`
-5. Tambah CHECK constraint di `nomor_surat_allocation`:
-   ```sql
-   ALTER TABLE public.nomor_surat_allocation
-     ADD CONSTRAINT alloc_range_4digit CHECK (range_end <= 9999 AND range_start >= 1);
-   ```
-   (Aman karena semua range existing ≤ 1600.)
+## Perbaikan
 
-### Fase 3 — Sinkronisasi frontend
+Perbarui **hanya** `src/integrations/supabase/auth-attacher.ts` agar selalu mengirim token yang valid:
 
-6. `src/lib/allocation.functions.ts` — ubah `RangeBase` dari `.max(99999)` menjadi `.max(9999)` untuk `range_start` dan `range_end`. Pesan error validasi ikut menyesuaikan.
+1. Panggil `supabase.auth.getSession()`.
+2. Jika `expires_at` sudah lewat / < 60 detik lagi kedaluwarsa → panggil `supabase.auth.refreshSession()` dan pakai token hasil refresh.
+3. Jika masih tidak ada token setelah refresh, coba `getSession()` sekali lagi (menangani race saat hydration di custom domain).
+4. Kirim `Authorization: Bearer <token>` bila ada; jika benar-benar tidak ada sesi, biarkan kosong (memang guest).
 
-### Yang TIDAK diubah
-- Prefix `090/…/P.KI.YYYY` tetap.
-- RLS, fungsi approve/reject/submit_laporan, notifikasi runtime, kompresi foto, UI dashboard/LPD/master — tidak disentuh.
-- Definisi range alokasi existing (mis. 1404–1600) dipertahankan, hanya `last_used_number` yang direset.
-- Bucket `laporan_lpd` tetap ada dengan setting yang sama (hanya isinya dikosongkan).
+Tidak mengubah `start.ts` (middleware sudah terdaftar), tidak mengubah `requireSupabaseAuth`, tidak mengubah komponen. Ini murni memperkuat sisi klien agar token yang dikirim selalu segar dan tidak hilang karena race.
 
-### Hasil akhir yang diharapkan
-- `transaksi_lpd`, `detail_petugas`, `notifikasi` kosong.
-- Bucket `laporan_lpd` kosong.
-- SPT berikutnya yang dibuat Admin akan menghasilkan nomor 4 digit, mis. `090/1404/P.KI.2026` (menyesuaikan alokasi aktif tahun berjalan).
-- Master nomor surat tidak bisa lagi menerima range > 9999.
+## Verifikasi
 
-### Catatan
-Error upload dist di turn sebelumnya adalah gangguan infra S3 (bukan bug kode) — akan hilang saat build berikutnya.
+- Buka `/dashboard` di custom domain sebagai Admin → menu Master & tombol "Edit SPT" tetap muncul setelah reload keras.
+- Biarkan tab idle > 1 jam lalu klik menu → tidak ada "Forbidden: hanya Admin" karena token akan di-refresh otomatis sebelum request.
+- Login sebagai Petugas → tidak muncul menu Admin (perilaku lama tetap benar).
