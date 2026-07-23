@@ -13,6 +13,7 @@ import {
   markNotifikasiRead,
   markAllNotifikasiRead,
 } from "@/lib/notifikasi.functions";
+import { useSession } from "@/hooks/use-current-user";
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
