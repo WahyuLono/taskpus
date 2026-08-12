@@ -19,8 +19,8 @@ Tidak disentuh (masih "Menunggu", belum disetujui):
 - Status persetujuan: Disetujui -> **Ditolak**
 - Status surat: Sudah -> **Belum**
 - Data penyetuju (siapa & kapan) dikosongkan
-- Catatan penolakan diisi:
-  "Mohon upload ulang foto penugasan anda, beserta watermark yang sesuai dengan tanggal, dan tempat penugasan secara real time penugasan."
+- Catatan penolakan diisi:  
+"Mohon upload ulang foto penugasan anda, beserta watermark yang sesuai dengan tanggal, dan tempat penugasan secara real time penugasan, BUKAN STIKER."
 - Setiap petugas yang ditugaskan pada LPD tersebut menerima **notifikasi penolakan** berisi catatan di atas
 - Isi laporan dan foto lama **tetap disimpan** (tidak dihapus), supaya petugas tinggal mengganti fotonya
 
