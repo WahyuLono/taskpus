@@ -1,30 +1,29 @@
-## Rencana Perbaikan
+# Rollback Persetujuan 7 LPD
 
-1. **Ubah Supabase browser client ke cookie-based session**
-   - Tambahkan dependency `@supabase/ssr`.
-   - Ganti konfigurasi `src/integrations/supabase/client.ts` dari storage `localStorage` ke `createBrowserClient(...)` agar sesi Supabase ditulis ke HTTP cookies.
-   - Pertahankan API import yang sama (`supabase`) supaya komponen yang ada tidak perlu diubah besar-besaran.
+## Kesimpulan evaluasi
 
-2. **Perkuat middleware pengirim token pada Server Functions**
-   - Perbarui `src/integrations/supabase/auth-attacher.ts` supaya tetap mengirim `Authorization: Bearer <token>` untuk setiap `createServerFn`.
-   - Token diambil dari sesi Supabase yang sekarang tersinkron melalui cookie, dengan refresh proaktif saat hampir kedaluwarsa.
-   - Jika sesi belum siap saat hydration/window focus, beri retry singkat sebelum request dilepas.
+Ini bukan penambahan fitur, hanya koreksi data. Cara paling aman **bukan** menghapus data atau nomor surat (itu akan merusak urutan jatah nomor), melainkan mengembalikan status persetujuan lewat mekanisme yang sudah ada di sistem: status **Ditolak + catatan**.
 
-3. **Perkuat middleware server agar tidak hanya bergantung pada header**
-   - Perbarui `src/integrations/supabase/auth-middleware.ts`.
-   - Alur utama tetap membaca `Authorization` header.
-   - Jika header tidak ada, middleware akan membaca cookie Supabase dari request Cloudflare Worker menggunakan `@supabase/ssr` server client.
-   - Setelah user valid, middleware tetap membuat Supabase client server-side yang membawa bearer token user, sehingga RLS dan role Admin/Petugas tetap benar.
+Setelah dirollback, petugas otomatis bisa mengedit laporan, mengunggah ulang foto, lalu mengajukan persetujuan kembali. Nomor surat, tanggal, dan penugasan tetap utuh.
 
-4. **Rapikan guard sesi di route/hook yang rawan race**
-   - `/_authenticated` dan `/login` menggunakan `supabase.auth.getUser()` atau sesi cookie-backed yang valid, bukan sekadar cache localStorage.
-   - `useSession()` tetap mendengar `onAuthStateChange`, tetapi sumber sesi sudah cookie-backed sehingga refetch/window focus tidak membuat user turun menjadi guest.
+## Cakupan
 
-5. **Kurangi refetch auth yang terlalu agresif**
-   - Di `src/routes/__root.tsx`, filter event auth hanya untuk `SIGNED_IN`, `SIGNED_OUT`, dan `USER_UPDATED`.
-   - Hindari invalidasi query pada event seperti `INITIAL_SESSION` atau `TOKEN_REFRESHED` agar tidak memicu request Server Function terlalu dini/berulang saat token sedang refresh.
+Yang dirollback (status saat ini "Disetujui"):
+090/2139, 2140, 2141, 2142, 2143, 2144, 2151 (P.KI.2026)
 
-6. **Verifikasi**
-   - Login sebagai Admin di custom domain/production.
-   - Hard refresh `/dashboard`, pindah tab lalu fokus kembali, dan buka fitur yang memanggil Server Functions seperti notifikasi, daftar LPD, master data, dan buat SPT.
-   - Pastikan tidak ada error `Unauthorized: No authorization header provided` dan role tetap Admin/Petugas sesuai data `master_user`.
+Tidak disentuh (masih "Menunggu", belum disetujui):
+090/2146, 2148, 2149, 2150
+
+## Yang akan terjadi pada 7 LPD tersebut
+
+- Status persetujuan: Disetujui -> **Ditolak**
+- Status surat: Sudah -> **Belum**
+- Data penyetuju (siapa & kapan) dikosongkan
+- Catatan penolakan diisi:
+  "Mohon upload ulang foto penugasan anda, beserta watermark yang sesuai dengan tanggal, dan tempat penugasan secara real time penugasan."
+- Setiap petugas yang ditugaskan pada LPD tersebut menerima **notifikasi penolakan** berisi catatan di atas
+- Isi laporan dan foto lama **tetap disimpan** (tidak dihapus), supaya petugas tinggal mengganti fotonya
+
+## Catatan teknis
+
+Perubahan dilakukan sebagai operasi data (bukan migrasi skema): satu UPDATE pada `transaksi_lpd` untuk 7 nomor surat tersebut (`approval_status='Ditolak'`, `status_lpd='Belum'`, `approved_by`/`approved_at` = NULL, `catatan_reject` diisi, `updated_at=now()`), diikuti INSERT ke `notifikasi` bertipe `lpd_rejected` untuk setiap petugas pada `detail_petugas`. Meniru persis perilaku fungsi `reject_lpd` yang sudah ada, tanpa mengubah kode aplikasi maupun struktur database.
