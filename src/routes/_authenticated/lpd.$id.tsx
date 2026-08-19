@@ -696,24 +696,29 @@ function LaporanReadonly({
         <p className="text-sm text-on-surface-variant">Laporan belum diisi.</p>
       )}
 
-      {lpd.url_foto && (
+      {paths.length > 0 && (
         <div>
           <p className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold mb-2">
             Dokumentasi
           </p>
-          {signedUrl ? (
-            <a
-              href={signedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block aspect-video w-full max-w-2xl rounded-lg overflow-hidden border border-outline-variant bg-surface-container-low"
-            >
-              <img
-                src={signedUrl}
-                alt="Dokumentasi kegiatan"
-                className="w-full h-full object-cover"
-              />
-            </a>
+          {signedUrls.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 max-w-3xl">
+              {signedUrls.map((url, i) => (
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block aspect-video w-full rounded-lg overflow-hidden border border-outline-variant bg-surface-container-low"
+                >
+                  <img
+                    src={url}
+                    alt={`Dokumentasi kegiatan ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
           ) : (
             <p className="text-xs text-on-surface-variant">Memuat foto…</p>
           )}
