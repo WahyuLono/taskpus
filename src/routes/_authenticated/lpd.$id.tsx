@@ -25,6 +25,17 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import imageCompression from "browser-image-compression";
+import { XIcon } from "lucide-react";
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment";
 
 const COMPRESSION_OPTS = {
   maxSizeMB: 0.25,
