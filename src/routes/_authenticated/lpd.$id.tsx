@@ -45,7 +45,16 @@ export const Route = createFileRoute("/_authenticated/lpd/$id")({
 });
 
 const MAX_FOTO_MB = 5;
+const MAX_FOTO = 2;
 const FIELD_MAX = 500;
+
+type FotoSlot = {
+  file?: File;
+  existingPath?: string;
+  name: string;
+  size: number | null;
+  preview: string | null;
+};
 
 type LaporanForm = {
   alat: string;
