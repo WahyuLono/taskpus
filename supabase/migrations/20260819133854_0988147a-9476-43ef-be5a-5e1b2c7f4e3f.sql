@@ -1,0 +1,1 @@
+ALTER TABLE public.transaksi_lpd ADD COLUMN IF NOT EXISTS url_foto_2 text;

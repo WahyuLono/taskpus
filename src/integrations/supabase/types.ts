@@ -264,6 +264,7 @@ export type Database = {
           tindak_lanjut: string | null
           updated_at: string | null
           url_foto: string | null
+          url_foto_2: string | null
         }
         Insert: {
           approval_status?: Database["public"]["Enums"]["approval_status_lpd"]
@@ -293,6 +294,7 @@ export type Database = {
           tindak_lanjut?: string | null
           updated_at?: string | null
           url_foto?: string | null
+          url_foto_2?: string | null
         }
         Update: {
           approval_status?: Database["public"]["Enums"]["approval_status_lpd"]
@@ -322,6 +324,7 @@ export type Database = {
           tindak_lanjut?: string | null
           updated_at?: string | null
           url_foto?: string | null
+          url_foto_2?: string | null
         }
         Relationships: [
           {
