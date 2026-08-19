@@ -743,27 +743,43 @@ function LaporanFormView({
   const fileRef = useRef<HTMLInputElement>(null);
   const initial = readLaporan(lpd) ?? EMPTY_LAPORAN;
   const [form, setForm] = useState<LaporanForm>(initial);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [fotos, setFotos] = useState<FotoSlot[]>(() =>
+    ([lpd.url_foto, lpd.url_foto_2].filter(Boolean) as string[]).map((p) => ({
+      existingPath: p,
+      name: p.split("/").pop() ?? "foto.jpg",
+      size: null,
+      preview: null,
+    })),
+  );
   const [dragOver, setDragOver] = useState(false);
-  const hasExistingFoto = !!lpd.url_foto;
   const isRevision = lpd.approval_status === "Ditolak";
 
-  // Load existing foto preview (signed URL) for revisions
+  // Load existing foto previews (signed URL) for revisions
   useEffect(() => {
-    if (!hasExistingFoto || preview) return;
+    const missing = fotos.filter((f) => f.existingPath && !f.preview);
+    if (missing.length === 0) return;
     let cancel = false;
-    supabase.storage
-      .from("laporan_lpd")
-      .createSignedUrl(lpd.url_foto, 3600)
-      .then(({ data }) => {
-        if (!cancel && data?.signedUrl) setPreview(data.signedUrl);
-      });
+    Promise.all(
+      missing.map((f) =>
+        supabase.storage
+          .from("laporan_lpd")
+          .createSignedUrl(f.existingPath!, 3600)
+          .then(({ data }) => ({ path: f.existingPath!, url: data?.signedUrl ?? null })),
+      ),
+    ).then((res) => {
+      if (cancel) return;
+      setFotos((prev) =>
+        prev.map((f) => {
+          const hit = res.find((r) => r.path === f.existingPath);
+          return hit?.url ? { ...f, preview: hit.url } : f;
+        }),
+      );
+    });
     return () => {
       cancel = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lpd.url_foto]);
+  }, [lpd.url_foto, lpd.url_foto_2]);
 
   const jadwal = formatDate(lpd.tgl_kegiatan);
   const tempat = lpd.master_tempat?.nama_tempat ?? "—";
@@ -774,33 +790,47 @@ function LaporanFormView({
   const allFilled = (Object.keys(EMPTY_LAPORAN) as (keyof LaporanForm)[]).every(
     (k) => form[k].trim().length >= 1,
   );
-  const canSubmit = allFilled && (!!file || hasExistingFoto);
+  const canSubmit = allFilled && fotos.length >= 1;
 
-  const handleFile = async (f: File | null) => {
-    if (!f) {
-      setFile(null);
-      setPreview(null);
+  const addFiles = async (list: FileList | File[] | null) => {
+    if (!list) return;
+    const incoming = Array.from(list);
+    let slots = MAX_FOTO - fotos.length;
+    if (slots <= 0) {
+      toast.error(`Maksimal ${MAX_FOTO} foto`);
       return;
     }
+    for (const f of incoming) {
+      if (slots <= 0) {
+        toast.warning(`Hanya ${MAX_FOTO} foto yang dapat diunggah`);
+        break;
+      }
+      const ok = await addOneFile(f);
+      if (ok) slots -= 1;
+    }
+  };
+
+  const addOneFile = async (f: File): Promise<boolean> => {
     if (/heic|heif/i.test(f.type) || /\.(heic|heif)$/i.test(f.name)) {
       toast.error("Format HEIC tidak didukung", {
         description: "Silakan konversi ke JPG/PNG terlebih dahulu.",
       });
-      return;
+      return false;
     }
     if (!f.type.startsWith("image/")) {
       toast.error("File harus berupa gambar");
-      return;
+      return false;
     }
     if (f.size > MAX_FOTO_MB * 1024 * 1024) {
       toast.error(`Ukuran file maksimal ${MAX_FOTO_MB}MB`);
-      return;
+      return false;
     }
 
     const tId = toast.loading("Mengompres foto…");
+    let finalFile: File;
     try {
       const compressed = await imageCompression(f, COMPRESSION_OPTS);
-      const finalFile = new File(
+      finalFile = new File(
         [compressed],
         f.name.replace(/\.[^.]+$/, "") + ".jpg",
         { type: "image/jpeg" },
@@ -809,38 +839,61 @@ function LaporanFormView({
         id: tId,
         description: `${formatBytes(f.size)} → ${formatBytes(finalFile.size)}`,
       });
-      setFile(finalFile);
-      setPreview(URL.createObjectURL(finalFile));
     } catch (err) {
       toast.warning("Kompresi gagal, memakai file asli", {
         id: tId,
         description: (err as Error).message,
       });
-      setFile(f);
-      setPreview(URL.createObjectURL(f));
+      finalFile = f;
     }
+    setFotos((prev) =>
+      prev.length >= MAX_FOTO
+        ? prev
+        : [
+            ...prev,
+            {
+              file: finalFile,
+              name: finalFile.name,
+              size: finalFile.size,
+              preview: URL.createObjectURL(finalFile),
+            },
+          ],
+    );
+    return true;
   };
+
+  const removeFoto = (index: number) =>
+    setFotos((prev) => prev.filter((_, i) => i !== index));
 
   const mut = useMutation({
     mutationFn: async () => {
-      let path = lpd.url_foto as string | null;
-      if (file) {
-        const tahun = new Date(lpd.tgl_buat).getFullYear();
-        const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
-        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}.${ext}`;
+      const tahun = new Date(lpd.tgl_buat).getFullYear();
+      const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
+      const paths: string[] = [];
 
+      for (let i = 0; i < fotos.length; i++) {
+        const slot = fotos[i];
+        if (slot.existingPath && !slot.file) {
+          paths.push(slot.existingPath);
+          continue;
+        }
+        const file = slot.file!;
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}-${i}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("laporan_lpd")
           .upload(path, file, { upsert: true, contentType: file.type });
         if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
+        paths.push(path);
       }
-      if (!path) throw new Error("Foto belum dipilih");
+
+      if (paths.length === 0) throw new Error("Foto belum dipilih");
 
       await submit({
         data: {
           id,
-          url_foto: path,
+          url_foto: paths[0],
+          url_foto_2: paths[1] ?? null,
           laporan: {
             alat: form.alat.trim(),
             metode: form.metode.trim(),
