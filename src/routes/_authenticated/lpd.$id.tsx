@@ -25,6 +25,17 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import imageCompression from "browser-image-compression";
+import { XIcon } from "lucide-react";
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment";
 
 const COMPRESSION_OPTS = {
   maxSizeMB: 0.25,
@@ -45,7 +56,16 @@ export const Route = createFileRoute("/_authenticated/lpd/$id")({
 });
 
 const MAX_FOTO_MB = 5;
+const MAX_FOTO = 2;
 const FIELD_MAX = 500;
+
+type FotoSlot = {
+  file?: File;
+  existingPath?: string;
+  name: string;
+  size: number | null;
+  preview: string | null;
+};
 
 type LaporanForm = {
   alat: string;
@@ -628,20 +648,27 @@ function LaporanReadonly({
   lpd: any;
   petugasCount: number;
 }) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const paths: string[] = [lpd.url_foto, lpd.url_foto_2].filter(Boolean);
+  const pathsKey = paths.join("|");
+  const [signedUrls, setSignedUrls] = useState<string[]>([]);
   useEffect(() => {
-    if (!lpd.url_foto) return;
+    if (paths.length === 0) return;
     let cancel = false;
-    supabase.storage
-      .from("laporan_lpd")
-      .createSignedUrl(lpd.url_foto, 3600)
-      .then(({ data }) => {
-        if (!cancel) setSignedUrl(data?.signedUrl ?? null);
-      });
+    Promise.all(
+      paths.map((p) =>
+        supabase.storage
+          .from("laporan_lpd")
+          .createSignedUrl(p, 3600)
+          .then(({ data }) => data?.signedUrl ?? null),
+      ),
+    ).then((urls) => {
+      if (!cancel) setSignedUrls(urls.filter((u): u is string => !!u));
+    });
     return () => {
       cancel = true;
     };
-  }, [lpd.url_foto]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathsKey]);
 
   const parsed = readLaporan(lpd);
   const jadwal = formatDate(lpd.tgl_kegiatan);
@@ -689,24 +716,29 @@ function LaporanReadonly({
         <p className="text-sm text-on-surface-variant">Laporan belum diisi.</p>
       )}
 
-      {lpd.url_foto && (
+      {paths.length > 0 && (
         <div>
           <p className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold mb-2">
             Dokumentasi
           </p>
-          {signedUrl ? (
-            <a
-              href={signedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block aspect-video w-full max-w-2xl rounded-lg overflow-hidden border border-outline-variant bg-surface-container-low"
-            >
-              <img
-                src={signedUrl}
-                alt="Dokumentasi kegiatan"
-                className="w-full h-full object-cover"
-              />
-            </a>
+          {signedUrls.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 max-w-3xl">
+              {signedUrls.map((url, i) => (
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block aspect-video w-full rounded-lg overflow-hidden border border-outline-variant bg-surface-container-low"
+                >
+                  <img
+                    src={url}
+                    alt={`Dokumentasi kegiatan ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
           ) : (
             <p className="text-xs text-on-surface-variant">Memuat foto…</p>
           )}
@@ -731,27 +763,43 @@ function LaporanFormView({
   const fileRef = useRef<HTMLInputElement>(null);
   const initial = readLaporan(lpd) ?? EMPTY_LAPORAN;
   const [form, setForm] = useState<LaporanForm>(initial);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [fotos, setFotos] = useState<FotoSlot[]>(() =>
+    ([lpd.url_foto, lpd.url_foto_2].filter(Boolean) as string[]).map((p) => ({
+      existingPath: p,
+      name: p.split("/").pop() ?? "foto.jpg",
+      size: null,
+      preview: null,
+    })),
+  );
   const [dragOver, setDragOver] = useState(false);
-  const hasExistingFoto = !!lpd.url_foto;
   const isRevision = lpd.approval_status === "Ditolak";
 
-  // Load existing foto preview (signed URL) for revisions
+  // Load existing foto previews (signed URL) for revisions
   useEffect(() => {
-    if (!hasExistingFoto || preview) return;
+    const missing = fotos.filter((f) => f.existingPath && !f.preview);
+    if (missing.length === 0) return;
     let cancel = false;
-    supabase.storage
-      .from("laporan_lpd")
-      .createSignedUrl(lpd.url_foto, 3600)
-      .then(({ data }) => {
-        if (!cancel && data?.signedUrl) setPreview(data.signedUrl);
-      });
+    Promise.all(
+      missing.map((f) =>
+        supabase.storage
+          .from("laporan_lpd")
+          .createSignedUrl(f.existingPath!, 3600)
+          .then(({ data }) => ({ path: f.existingPath!, url: data?.signedUrl ?? null })),
+      ),
+    ).then((res) => {
+      if (cancel) return;
+      setFotos((prev) =>
+        prev.map((f) => {
+          const hit = res.find((r) => r.path === f.existingPath);
+          return hit?.url ? { ...f, preview: hit.url } : f;
+        }),
+      );
+    });
     return () => {
       cancel = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lpd.url_foto]);
+  }, [lpd.url_foto, lpd.url_foto_2]);
 
   const jadwal = formatDate(lpd.tgl_kegiatan);
   const tempat = lpd.master_tempat?.nama_tempat ?? "—";
@@ -762,33 +810,47 @@ function LaporanFormView({
   const allFilled = (Object.keys(EMPTY_LAPORAN) as (keyof LaporanForm)[]).every(
     (k) => form[k].trim().length >= 1,
   );
-  const canSubmit = allFilled && (!!file || hasExistingFoto);
+  const canSubmit = allFilled && fotos.length >= 1;
 
-  const handleFile = async (f: File | null) => {
-    if (!f) {
-      setFile(null);
-      setPreview(null);
+  const addFiles = async (list: FileList | File[] | null) => {
+    if (!list) return;
+    const incoming = Array.from(list);
+    let slots = MAX_FOTO - fotos.length;
+    if (slots <= 0) {
+      toast.error(`Maksimal ${MAX_FOTO} foto`);
       return;
     }
+    for (const f of incoming) {
+      if (slots <= 0) {
+        toast.warning(`Hanya ${MAX_FOTO} foto yang dapat diunggah`);
+        break;
+      }
+      const ok = await addOneFile(f);
+      if (ok) slots -= 1;
+    }
+  };
+
+  const addOneFile = async (f: File): Promise<boolean> => {
     if (/heic|heif/i.test(f.type) || /\.(heic|heif)$/i.test(f.name)) {
       toast.error("Format HEIC tidak didukung", {
         description: "Silakan konversi ke JPG/PNG terlebih dahulu.",
       });
-      return;
+      return false;
     }
     if (!f.type.startsWith("image/")) {
       toast.error("File harus berupa gambar");
-      return;
+      return false;
     }
     if (f.size > MAX_FOTO_MB * 1024 * 1024) {
       toast.error(`Ukuran file maksimal ${MAX_FOTO_MB}MB`);
-      return;
+      return false;
     }
 
     const tId = toast.loading("Mengompres foto…");
+    let finalFile: File;
     try {
       const compressed = await imageCompression(f, COMPRESSION_OPTS);
-      const finalFile = new File(
+      finalFile = new File(
         [compressed],
         f.name.replace(/\.[^.]+$/, "") + ".jpg",
         { type: "image/jpeg" },
@@ -797,38 +859,61 @@ function LaporanFormView({
         id: tId,
         description: `${formatBytes(f.size)} → ${formatBytes(finalFile.size)}`,
       });
-      setFile(finalFile);
-      setPreview(URL.createObjectURL(finalFile));
     } catch (err) {
       toast.warning("Kompresi gagal, memakai file asli", {
         id: tId,
         description: (err as Error).message,
       });
-      setFile(f);
-      setPreview(URL.createObjectURL(f));
+      finalFile = f;
     }
+    setFotos((prev) =>
+      prev.length >= MAX_FOTO
+        ? prev
+        : [
+            ...prev,
+            {
+              file: finalFile,
+              name: finalFile.name,
+              size: finalFile.size,
+              preview: URL.createObjectURL(finalFile),
+            },
+          ],
+    );
+    return true;
   };
+
+  const removeFoto = (index: number) =>
+    setFotos((prev) => prev.filter((_, i) => i !== index));
 
   const mut = useMutation({
     mutationFn: async () => {
-      let path = lpd.url_foto as string | null;
-      if (file) {
-        const tahun = new Date(lpd.tgl_buat).getFullYear();
-        const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
-        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}.${ext}`;
+      const tahun = new Date(lpd.tgl_buat).getFullYear();
+      const bulan = String(new Date(lpd.tgl_buat).getMonth() + 1).padStart(2, "0");
+      const paths: string[] = [];
 
+      for (let i = 0; i < fotos.length; i++) {
+        const slot = fotos[i];
+        if (slot.existingPath && !slot.file) {
+          paths.push(slot.existingPath);
+          continue;
+        }
+        const file = slot.file!;
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const path = `${tahun}/${bulan}/${lpd.no_surat_slug}/foto-${Date.now()}-${i}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("laporan_lpd")
           .upload(path, file, { upsert: true, contentType: file.type });
         if (upErr) throw new Error(`Upload gagal: ${upErr.message}`);
+        paths.push(path);
       }
-      if (!path) throw new Error("Foto belum dipilih");
+
+      if (paths.length === 0) throw new Error("Foto belum dipilih");
 
       await submit({
         data: {
           id,
-          url_foto: path,
+          url_foto: paths[0],
+          url_foto_2: paths[1] ?? null,
           laporan: {
             alat: form.alat.trim(),
             metode: form.metode.trim(),
@@ -936,74 +1021,99 @@ function LaporanFormView({
       </div>
 
       {/* Foto Dokumentasi */}
-      <div>
-        <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
-          Foto Dokumentasi
-        </label>
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            handleFile(e.dataTransfer.files?.[0] ?? null);
-          }}
-          onClick={() => fileRef.current?.click()}
-          className={cn(
-            "mt-1.5 border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors text-center",
-            dragOver
-              ? "border-primary bg-primary/5"
-              : "border-outline-variant hover:border-primary/50 hover:bg-surface-container-low",
-          )}
-        >
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-          />
-          {preview ? (
-            <div className="flex items-center gap-4">
-              <img
-                src={preview}
-                alt="preview"
-                className="h-24 w-24 object-cover rounded-md border border-outline-variant"
-              />
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-on-surface">{file?.name}</p>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  {((file?.size ?? 0) / 1024).toFixed(0)} KB — klik untuk ganti
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFile(null);
-                }}
-                className="text-xs text-destructive hover:underline"
-              >
-                Hapus
-              </button>
-            </div>
-          ) : (
-            <>
-              <span className="material-symbols-outlined !text-[36px] text-on-surface-variant">
-                cloud_upload
-              </span>
-              <p className="text-sm font-medium text-on-surface mt-1">
-                Tarik & lepas foto di sini, atau klik untuk pilih
-              </p>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                JPG / PNG, maksimal {MAX_FOTO_MB}MB
-              </p>
-            </>
-          )}
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
+            Foto Dokumentasi
+          </label>
+          <span className="text-xs text-on-surface-variant">
+            {fotos.length}/{MAX_FOTO} foto
+          </span>
         </div>
+
+        {fotos.length > 0 && (
+          <AttachmentGroup>
+            {fotos.map((f, i) => (
+              <Attachment key={`${f.name}-${i}`}>
+                <AttachmentMedia>
+                  {f.preview ? (
+                    <img src={f.preview} alt={`Foto ${i + 1}`} />
+                  ) : (
+                    <div className="flex size-full items-center justify-center">
+                      <span className="material-symbols-outlined !text-[20px] text-on-surface-variant">
+                        image
+                      </span>
+                    </div>
+                  )}
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{f.name}</AttachmentTitle>
+                  <AttachmentDescription>
+                    {f.size != null
+                      ? `JPG · ${formatBytes(f.size)}`
+                      : "Foto tersimpan"}
+                  </AttachmentDescription>
+                </AttachmentContent>
+                <AttachmentActions>
+                  <AttachmentAction
+                    aria-label={`Hapus foto ${i + 1}`}
+                    onClick={() => removeFoto(i)}
+                  >
+                    <XIcon className="size-4" />
+                  </AttachmentAction>
+                </AttachmentActions>
+              </Attachment>
+            ))}
+          </AttachmentGroup>
+        )}
+
+        {fotos.length < MAX_FOTO ? (
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              void addFiles(e.dataTransfer.files);
+            }}
+            onClick={() => fileRef.current?.click()}
+            className={cn(
+              "border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors text-center",
+              dragOver
+                ? "border-primary bg-primary/5"
+                : "border-outline-variant hover:border-primary/50 hover:bg-surface-container-low",
+            )}
+          >
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <span className="material-symbols-outlined !text-[36px] text-on-surface-variant">
+              cloud_upload
+            </span>
+            <p className="text-sm font-medium text-on-surface mt-1">
+              Tarik & lepas foto di sini, atau klik untuk pilih
+            </p>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              JPG / PNG, maksimal {MAX_FOTO_MB}MB per foto — bisa unggah sampai{" "}
+              {MAX_FOTO} foto
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-on-surface-variant">
+            Maksimal {MAX_FOTO} foto. Hapus salah satu untuk mengganti.
+          </p>
+        )}
       </div>
 
       {!canSubmit && (
