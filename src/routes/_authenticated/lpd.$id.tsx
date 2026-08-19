@@ -1010,74 +1010,99 @@ function LaporanFormView({
       </div>
 
       {/* Foto Dokumentasi */}
-      <div>
-        <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
-          Foto Dokumentasi
-        </label>
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            handleFile(e.dataTransfer.files?.[0] ?? null);
-          }}
-          onClick={() => fileRef.current?.click()}
-          className={cn(
-            "mt-1.5 border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors text-center",
-            dragOver
-              ? "border-primary bg-primary/5"
-              : "border-outline-variant hover:border-primary/50 hover:bg-surface-container-low",
-          )}
-        >
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-          />
-          {preview ? (
-            <div className="flex items-center gap-4">
-              <img
-                src={preview}
-                alt="preview"
-                className="h-24 w-24 object-cover rounded-md border border-outline-variant"
-              />
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-on-surface">{file?.name}</p>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  {((file?.size ?? 0) / 1024).toFixed(0)} KB — klik untuk ganti
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFile(null);
-                }}
-                className="text-xs text-destructive hover:underline"
-              >
-                Hapus
-              </button>
-            </div>
-          ) : (
-            <>
-              <span className="material-symbols-outlined !text-[36px] text-on-surface-variant">
-                cloud_upload
-              </span>
-              <p className="text-sm font-medium text-on-surface mt-1">
-                Tarik & lepas foto di sini, atau klik untuk pilih
-              </p>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                JPG / PNG, maksimal {MAX_FOTO_MB}MB
-              </p>
-            </>
-          )}
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <label className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">
+            Foto Dokumentasi
+          </label>
+          <span className="text-xs text-on-surface-variant">
+            {fotos.length}/{MAX_FOTO} foto
+          </span>
         </div>
+
+        {fotos.length > 0 && (
+          <AttachmentGroup>
+            {fotos.map((f, i) => (
+              <Attachment key={`${f.name}-${i}`}>
+                <AttachmentMedia>
+                  {f.preview ? (
+                    <img src={f.preview} alt={`Foto ${i + 1}`} />
+                  ) : (
+                    <div className="flex size-full items-center justify-center">
+                      <span className="material-symbols-outlined !text-[20px] text-on-surface-variant">
+                        image
+                      </span>
+                    </div>
+                  )}
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{f.name}</AttachmentTitle>
+                  <AttachmentDescription>
+                    {f.size != null
+                      ? `JPG · ${formatBytes(f.size)}`
+                      : "Foto tersimpan"}
+                  </AttachmentDescription>
+                </AttachmentContent>
+                <AttachmentActions>
+                  <AttachmentAction
+                    aria-label={`Hapus foto ${i + 1}`}
+                    onClick={() => removeFoto(i)}
+                  >
+                    <XIcon className="size-4" />
+                  </AttachmentAction>
+                </AttachmentActions>
+              </Attachment>
+            ))}
+          </AttachmentGroup>
+        )}
+
+        {fotos.length < MAX_FOTO ? (
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              void addFiles(e.dataTransfer.files);
+            }}
+            onClick={() => fileRef.current?.click()}
+            className={cn(
+              "border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors text-center",
+              dragOver
+                ? "border-primary bg-primary/5"
+                : "border-outline-variant hover:border-primary/50 hover:bg-surface-container-low",
+            )}
+          >
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <span className="material-symbols-outlined !text-[36px] text-on-surface-variant">
+              cloud_upload
+            </span>
+            <p className="text-sm font-medium text-on-surface mt-1">
+              Tarik & lepas foto di sini, atau klik untuk pilih
+            </p>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              JPG / PNG, maksimal {MAX_FOTO_MB}MB per foto — bisa unggah sampai{" "}
+              {MAX_FOTO} foto
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-on-surface-variant">
+            Maksimal {MAX_FOTO} foto. Hapus salah satu untuk mengganti.
+          </p>
+        )}
       </div>
 
       {!canSubmit && (
