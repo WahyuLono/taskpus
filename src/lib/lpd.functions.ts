@@ -118,6 +118,7 @@ const LaporanFieldsSchema = z.object({
 const SubmitLaporanSchema = z.object({
   id: z.string().uuid(),
   url_foto: z.string().min(1).max(500),
+  url_foto_2: z.string().max(500).nullable().optional(),
   laporan: LaporanFieldsSchema,
 });
 
