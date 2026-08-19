@@ -628,20 +628,27 @@ function LaporanReadonly({
   lpd: any;
   petugasCount: number;
 }) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const paths: string[] = [lpd.url_foto, lpd.url_foto_2].filter(Boolean);
+  const pathsKey = paths.join("|");
+  const [signedUrls, setSignedUrls] = useState<string[]>([]);
   useEffect(() => {
-    if (!lpd.url_foto) return;
+    if (paths.length === 0) return;
     let cancel = false;
-    supabase.storage
-      .from("laporan_lpd")
-      .createSignedUrl(lpd.url_foto, 3600)
-      .then(({ data }) => {
-        if (!cancel) setSignedUrl(data?.signedUrl ?? null);
-      });
+    Promise.all(
+      paths.map((p) =>
+        supabase.storage
+          .from("laporan_lpd")
+          .createSignedUrl(p, 3600)
+          .then(({ data }) => data?.signedUrl ?? null),
+      ),
+    ).then((urls) => {
+      if (!cancel) setSignedUrls(urls.filter((u): u is string => !!u));
+    });
     return () => {
       cancel = true;
     };
-  }, [lpd.url_foto]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathsKey]);
 
   const parsed = readLaporan(lpd);
   const jadwal = formatDate(lpd.tgl_kegiatan);
