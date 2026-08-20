@@ -169,6 +169,16 @@ function PrintLaporanPage() {
           max-height: 9cm;
           object-fit: contain;
         }
+        .lpd-foto-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .lpd-foto-grid.single { grid-template-columns: 1fr; }
+        .lpd-foto-grid img { max-height: 7cm; }
+
         .ttd-block {
           display: grid;
           grid-template-columns: 1fr auto;
