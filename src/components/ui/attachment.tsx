@@ -19,7 +19,7 @@ function Attachment({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="attachment"
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest p-2 text-left shadow-card",
+        "group relative flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest p-2 text-left shadow-card sm:gap-3",
         className,
       )}
       {...props}
