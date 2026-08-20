@@ -946,7 +946,7 @@ function LaporanFormView({
           {isRevision ? "Revisi Laporan" : "Laporan Hasil Pelaksanaan Tugas"}
         </h2>
         <p className="text-xs text-on-surface-variant mt-1">
-          Lengkapi seluruh isian laporan dan unggah satu foto dokumentasi. Setelah
+          Lengkapi seluruh isian laporan dan unggah 1–2 foto dokumentasi. Setelah
           disimpan, laporan akan dikirim ke Admin untuk persetujuan.
 
         </p>
