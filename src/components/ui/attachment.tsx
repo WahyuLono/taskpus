@@ -8,7 +8,7 @@ function AttachmentGroup({
   return (
     <div
       data-slot="attachment-group"
-      className={cn("grid gap-3 sm:grid-cols-2", className)}
+      className={cn("grid w-full grid-cols-1 gap-3 sm:grid-cols-2", className)}
       {...props}
     />
   );
