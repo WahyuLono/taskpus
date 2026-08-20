@@ -23,7 +23,9 @@ function PrintLaporanPage() {
   });
 
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
+  const [fotoUrl2, setFotoUrl2] = useState<string | null>(null);
   const urlFoto = (q.data as any)?.lpd?.url_foto as string | undefined;
+  const urlFoto2 = (q.data as any)?.lpd?.url_foto_2 as string | undefined;
 
   useEffect(() => {
     if (!urlFoto) return;
@@ -39,13 +41,29 @@ function PrintLaporanPage() {
     };
   }, [urlFoto]);
 
-  // Auto-print once data + image are ready
+  useEffect(() => {
+    if (!urlFoto2) return;
+    let cancel = false;
+    supabase.storage
+      .from("laporan_lpd")
+      .createSignedUrl(urlFoto2, 3600)
+      .then(({ data }) => {
+        if (!cancel) setFotoUrl2(data?.signedUrl ?? null);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [urlFoto2]);
+
+  // Auto-print once data + images are ready
   useEffect(() => {
     if (!q.data) return;
     if (urlFoto && !fotoUrl) return; // wait for signed URL
+    if (urlFoto2 && !fotoUrl2) return;
     const t = setTimeout(() => window.print(), 600);
     return () => clearTimeout(t);
-  }, [q.data, urlFoto, fotoUrl]);
+  }, [q.data, urlFoto, fotoUrl, urlFoto2, fotoUrl2]);
+
 
   if (!ready || (userId && !me) || meLoading)
     return <p className="p-10 text-center text-gray-500">Memuat…</p>;
