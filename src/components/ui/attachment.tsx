@@ -8,7 +8,7 @@ function AttachmentGroup({
   return (
     <div
       data-slot="attachment-group"
-      className={cn("grid gap-3 sm:grid-cols-2", className)}
+      className={cn("grid w-full grid-cols-1 gap-3 sm:grid-cols-2", className)}
       {...props}
     />
   );
@@ -19,7 +19,7 @@ function Attachment({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="attachment"
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest p-2 text-left shadow-card",
+        "group relative flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest p-2 text-left shadow-card sm:gap-3",
         className,
       )}
       {...props}
@@ -32,7 +32,7 @@ function AttachmentMedia({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="attachment-media"
       className={cn(
-        "size-14 shrink-0 overflow-hidden rounded-md border border-outline-variant bg-surface-container-low [&_img]:size-full [&_img]:object-cover",
+        "size-12 shrink-0 overflow-hidden sm:size-14 rounded-md border border-outline-variant bg-surface-container-low [&_img]:size-full [&_img]:object-cover",
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ function AttachmentContent({
   return (
     <div
       data-slot="attachment-content"
-      className={cn("min-w-0 flex-1", className)}
+      className={cn("min-w-0 flex-1 overflow-hidden", className)}
       {...props}
     />
   );
