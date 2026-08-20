@@ -32,7 +32,7 @@ function AttachmentMedia({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="attachment-media"
       className={cn(
-        "size-14 shrink-0 overflow-hidden rounded-md border border-outline-variant bg-surface-container-low [&_img]:size-full [&_img]:object-cover",
+        "size-12 shrink-0 overflow-hidden sm:size-14 rounded-md border border-outline-variant bg-surface-container-low [&_img]:size-full [&_img]:object-cover",
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ function AttachmentContent({
   return (
     <div
       data-slot="attachment-content"
-      className={cn("min-w-0 flex-1", className)}
+      className={cn("min-w-0 flex-1 overflow-hidden", className)}
       {...props}
     />
   );
