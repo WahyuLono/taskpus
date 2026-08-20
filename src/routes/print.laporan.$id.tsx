@@ -281,14 +281,22 @@ function PrintLaporanPage() {
               <td className="num">5.</td>
               <td className="label">Dokumentasi</td>
               <td>
-                {fotoUrl ? (
-                  <img src={fotoUrl} alt="Dokumentasi" className="lpd-foto" />
-                ) : urlFoto ? (
+                {fotoUrl || fotoUrl2 ? (
+                  <div className={`lpd-foto-grid${fotoUrl && fotoUrl2 ? "" : " single"}`}>
+                    {fotoUrl && (
+                      <img src={fotoUrl} alt="Dokumentasi 1" className="lpd-foto" />
+                    )}
+                    {fotoUrl2 && (
+                      <img src={fotoUrl2} alt="Dokumentasi 2" className="lpd-foto" />
+                    )}
+                  </div>
+                ) : urlFoto || urlFoto2 ? (
                   <span style={{ color: "#666" }}>Memuat foto…</span>
                 ) : (
                   <span style={{ color: "#666" }}>—</span>
                 )}
               </td>
+
             </tr>
           </tbody>
         </table>
