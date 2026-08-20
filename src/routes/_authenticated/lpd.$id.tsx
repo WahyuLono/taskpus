@@ -461,40 +461,42 @@ function getPetugasValue(p: any, key: string): string {
   return "—";
 }
 
+function PetugasFieldRow({ p, f }: { p: any; f: { key: string; label: string } }) {
+  return (
+    <div className="grid grid-cols-1 gap-x-1 sm:grid-cols-[minmax(0,140px)_12px_minmax(0,1fr)] sm:items-baseline">
+      <span className="text-xs text-on-surface-variant sm:text-sm">{f.label}</span>
+      <span className="hidden text-on-surface-variant sm:inline">:</span>
+      <span
+        className={cn(
+          "min-w-0 break-words font-medium text-on-surface",
+          f.key === "nip" && "font-mono tabular-nums",
+        )}
+      >
+        {getPetugasValue(p, f.key)}
+      </span>
+    </div>
+  );
+}
+
 function PetugasSingleCard({ p }: { p: any }) {
   return (
-    <div className="border border-outline-variant rounded-lg p-5 bg-surface-container-low">
+    <div className="border border-outline-variant rounded-lg p-4 sm:p-5 bg-surface-container-low">
       <div className="flex items-center gap-3 mb-4">
-        <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+        <div className="h-12 w-12 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
           {(p.nama ?? "?").slice(0, 1)}
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase text-on-surface-variant">
             Petugas Ditugaskan
           </p>
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
+          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
             {p.status_kepegawaian}
           </span>
         </div>
       </div>
       <div className="space-y-2 text-sm">
         {FIELD_LABELS.map((f) => (
-          <div
-            key={f.key}
-            className="grid items-baseline"
-            style={{ gridTemplateColumns: "160px 12px 1fr" }}
-          >
-            <span className="text-on-surface-variant">{f.label}</span>
-            <span className="text-on-surface-variant">:</span>
-            <span
-              className={cn(
-                "font-medium text-on-surface",
-                f.key === "nip" && "font-mono tabular-nums",
-              )}
-            >
-              {getPetugasValue(p, f.key)}
-            </span>
-          </div>
+          <PetugasFieldRow key={f.key} p={p} f={f} />
         ))}
       </div>
     </div>
@@ -504,31 +506,21 @@ function PetugasSingleCard({ p }: { p: any }) {
 function PetugasNumberedRow({ index, p }: { index: number; p: any }) {
   return (
     <div className="border border-outline-variant rounded-lg p-4 bg-surface-container-low">
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 sm:gap-4">
         <div className="h-8 w-8 shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
           {index}
         </div>
-        <div className="flex-1 space-y-1.5 text-sm">
+        <div className="min-w-0 flex-1 space-y-1.5 text-sm">
+          <div className="flex justify-end sm:hidden">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
+              {p.status_kepegawaian}
+            </span>
+          </div>
           {FIELD_LABELS.map((f) => (
-            <div
-              key={f.key}
-              className="grid items-baseline"
-              style={{ gridTemplateColumns: "160px 12px 1fr" }}
-            >
-              <span className="text-on-surface-variant">{f.label}</span>
-              <span className="text-on-surface-variant">:</span>
-              <span
-                className={cn(
-                  "font-medium text-on-surface",
-                  f.key === "nip" && "font-mono tabular-nums",
-                )}
-              >
-                {getPetugasValue(p, f.key)}
-              </span>
-            </div>
+            <PetugasFieldRow key={f.key} p={p} f={f} />
           ))}
         </div>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant shrink-0">
+        <span className="hidden sm:inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant shrink-0">
           {p.status_kepegawaian}
         </span>
       </div>
