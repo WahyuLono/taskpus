@@ -102,6 +102,7 @@ export type Database = {
           jabatan: string | null
           nama: string
           nip: string | null
+          no_wa: string | null
           role_user: Database["public"]["Enums"]["role_aplikasi"] | null
           status_kepegawaian: Database["public"]["Enums"]["status_pegawai"]
           unit: string | null
@@ -117,6 +118,7 @@ export type Database = {
           jabatan?: string | null
           nama: string
           nip?: string | null
+          no_wa?: string | null
           role_user?: Database["public"]["Enums"]["role_aplikasi"] | null
           status_kepegawaian: Database["public"]["Enums"]["status_pegawai"]
           unit?: string | null
@@ -132,6 +134,7 @@ export type Database = {
           jabatan?: string | null
           nama?: string
           nip?: string | null
+          no_wa?: string | null
           role_user?: Database["public"]["Enums"]["role_aplikasi"] | null
           status_kepegawaian?: Database["public"]["Enums"]["status_pegawai"]
           unit?: string | null
@@ -214,6 +217,27 @@ export type Database = {
           pesan?: string
           read_at?: string | null
           tipe?: Database["public"]["Enums"]["notifikasi_tipe"]
+        }
+        Relationships: []
+      }
+      setting_notifikasi: {
+        Row: {
+          id: string
+          nama_setting: string
+          template_pesan: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          nama_setting: string
+          template_pesan: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          nama_setting?: string
+          template_pesan?: string
+          updated_at?: string
         }
         Relationships: []
       }
