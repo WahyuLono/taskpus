@@ -36,3 +36,7 @@ Jika Anda tetap ingin bentuk Edge Function (misal dipanggil dari pg_cron/ekstern
 - Untuk petugas, status Sudah/Batal, atau belum H+7 → tombol disembunyikan.
 - Tombol menampilkan state loading, lalu toast sukses ("Reminder terkirim ke N nomor") atau toast error berisi pesan kegagalan.
 - Jika tidak ada petugas yang punya no_wa, tampilkan toast peringatan agar melengkapi no WA di Master User.
+
+Approved! Saya sangat setuju dengan pendekatan Server Function (`createServerFn`) karena memang lebih aman dan efisien. Lanjutkan eksekusi ke kode sesuai dengan plan yang Anda buat.
+
+**Satu tambahan penting:** Dalam pembuatan setiap elemen UI (terutama tabel LPD, form input No WA, dan card Setting Notifikasi), **selalu pertahankan desain yang responsif**. Pastikan tampilannya tetap rapi, nyaman dibaca, dan mudah digunakan ketika diakses melalui perangkat *mobile* (HP).
