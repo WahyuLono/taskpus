@@ -36,6 +36,12 @@ const ITEMS = [
     desc: "Atur jatah & range nomor surat per tahun",
     icon: "confirmation_number",
   },
+  {
+    to: "/master/setting-notifikasi",
+    title: "Setting Notifikasi",
+    desc: "Template pesan pengingat LPD via WhatsApp",
+    icon: "sms",
+  },
 ];
 
 function MasterIndex() {
