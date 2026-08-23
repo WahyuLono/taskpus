@@ -67,6 +67,7 @@ type UserRow = {
   role_user: "Admin" | "Petugas" | null;
   is_kepala_uptd: boolean | null;
   id_golongan: number | null;
+  no_wa: string | null;
 };
 
 type FormState = {
@@ -80,6 +81,7 @@ type FormState = {
   id_golongan: number | null;
   jabatan: string;
   unit: string;
+  no_wa: string;
 };
 
 const blankForm: FormState = {
@@ -93,6 +95,7 @@ const blankForm: FormState = {
   id_golongan: null,
   jabatan: "",
   unit: "",
+  no_wa: "",
 };
 
 function Page() {
@@ -172,6 +175,7 @@ function Page() {
       id_golongan: row.id_golongan,
       jabatan: row.jabatan ?? "",
       unit: row.unit ?? "",
+      no_wa: row.no_wa ?? "",
     });
     setDialog({ mode: "edit", row });
   };
@@ -185,6 +189,11 @@ function Page() {
     if (!dialog) return;
     if (dialog.mode === "add" && form.password.length < 6) {
       toast.error("Password minimal 6 karakter");
+      return;
+    }
+    const waErr = validateWa(form.no_wa);
+    if (waErr) {
+      toast.error(waErr);
       return;
     }
     setBusy(true);
@@ -203,6 +212,7 @@ function Page() {
             id_golongan: isAsn ? form.id_golongan : null,
             jabatan: form.jabatan.trim() || null,
             unit: form.unit.trim() || null,
+            no_wa: form.no_wa.trim() || null,
           },
         });
         toast.success("User ditambahkan");
@@ -221,6 +231,7 @@ function Page() {
             id_golongan: newStatus === "ASN" ? form.id_golongan : null,
             jabatan: form.jabatan.trim() || null,
             unit: form.unit.trim() || null,
+            no_wa: form.no_wa.trim() || null,
           },
         });
         if (isTransition) {
@@ -313,8 +324,9 @@ function Page() {
               <TableRow>
                 <TableHead>NIP / Username</TableHead>
                 <TableHead>Nama</TableHead>
-                <TableHead>Jabatan / Unit</TableHead>
-                <TableHead>Golongan</TableHead>
+                <TableHead className="hidden lg:table-cell">Jabatan / Unit</TableHead>
+                <TableHead className="hidden md:table-cell">No. WA</TableHead>
+                <TableHead className="hidden lg:table-cell">Golongan</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
@@ -323,13 +335,13 @@ function Page() {
             <TableBody>
               {users.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-on-surface-variant">
+                  <TableCell colSpan={8} className="text-center py-10 text-on-surface-variant">
                     Memuat…
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-on-surface-variant">
+                  <TableCell colSpan={8} className="text-center py-10 text-on-surface-variant">
                     Belum ada user
                   </TableCell>
                 </TableRow>
@@ -352,11 +364,18 @@ function Page() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm hidden lg:table-cell">
                       <div>{r.jabatan ?? "—"}</div>
                       <div className="text-xs text-on-surface-variant">{r.unit ?? ""}</div>
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm hidden md:table-cell whitespace-nowrap tabular-nums">
+                      {r.no_wa ? (
+                        r.no_wa
+                      ) : (
+                        <span className="text-on-surface-variant">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm hidden lg:table-cell">
                       {r.id_golongan ? golMap.get(r.id_golongan) ?? "-" : "-"}
                     </TableCell>
                     <TableCell>
@@ -557,6 +576,20 @@ function Page() {
               </div>
             )}
             <div className="space-y-2">
+              <Label>No. WhatsApp <span className="text-on-surface-variant text-xs">(opsional)</span></Label>
+              <Input
+                inputMode="numeric"
+                value={form.no_wa}
+                onChange={(e) =>
+                  setForm({ ...form, no_wa: e.target.value.replace(/\D/g, "").slice(0, 15) })
+                }
+                placeholder="08xxxxxxxxxx atau 628xxxxxxxxxx"
+              />
+              <p className="text-[11px] text-on-surface-variant">
+                Hanya angka, diawali 08 atau 628, 9–15 digit.
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label>Jabatan</Label>
               <Input
                 value={form.jabatan}
@@ -651,6 +684,16 @@ function Page() {
       </AlertDialog>
     </div>
   );
+}
+
+function validateWa(v: string): string | null {
+  const s = v.trim();
+  if (!s) return null;
+  if (!/^[0-9]+$/.test(s)) return "No. WhatsApp hanya boleh berisi angka";
+  if (!(s.startsWith("08") || s.startsWith("628")))
+    return "No. WhatsApp harus diawali 08 atau 628";
+  if (s.length < 9 || s.length > 15) return "No. WhatsApp harus 9-15 digit";
+  return null;
 }
 
 function Pill({
