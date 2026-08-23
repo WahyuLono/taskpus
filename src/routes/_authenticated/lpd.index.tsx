@@ -11,8 +11,69 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { sendReminderWa } from "@/lib/notifikasi-wa.functions";
 
 const PAGE_SIZE = 12;
+
+function isPastH7(tgl?: string | null) {
+  if (!tgl) return false;
+  const d = new Date(`${tgl}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return false;
+  d.setDate(d.getDate() + 7);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.getTime() >= d.getTime();
+}
+
+function ReminderButton({ row }: { row: any }) {
+  const send = useServerFn(sendReminderWa);
+  const [busy, setBusy] = useState(false);
+  const petugas = (row.detail_petugas ?? [])
+    .map((d: any) => d.master_user)
+    .filter(Boolean);
+  const withWa = petugas.filter((p: any) => (p?.no_wa ?? "").trim());
+
+  const onClick = async () => {
+    if (withWa.length === 0) {
+      toast.warning(
+        "Belum ada petugas dengan No. WhatsApp. Lengkapi di Data Master → User Pegawai.",
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      const res: any = await send({ data: { id_lpd: row.id_lpd } });
+      if (res.sent > 0) {
+        toast.success(`Reminder terkirim ke ${res.sent} dari ${res.total} nomor`);
+      }
+      const gagal = (res.results ?? []).filter((r: any) => !r.ok);
+      if (gagal.length > 0) {
+        toast.error(
+          `Gagal ke ${gagal.length} nomor: ${gagal.map((g: any) => `${g.nama} (${g.error ?? "gagal"})`).join(", ")}`,
+        );
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Gagal mengirim reminder");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={onClick}
+      disabled={busy}
+      className="gap-1 whitespace-nowrap"
+    >
+      <span className="material-symbols-outlined !text-[16px]">sms</span>
+      {busy ? "Mengirim…" : "Reminder WA"}
+    </Button>
+  );
+}
 
 const searchSchema = z.object({
   page: fallback(z.number().int().min(1), 1).default(1),
@@ -158,14 +219,19 @@ function LpdListPage() {
                   <td className="px-5 py-3">
                     <StatusBadge status={row.status_lpd} />
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    <Link
-                      to="/lpd/$id"
-                      params={{ id: row.id_lpd }}
-                      className="text-primary text-sm font-medium hover:underline"
-                    >
-                      Detail
-                    </Link>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center justify-end gap-2 flex-wrap">
+                      {me?.role_user === "Admin" &&
+                        row.status_lpd === "Belum" &&
+                        isPastH7(row.tgl_kegiatan) && <ReminderButton row={row} />}
+                        <Link
+                        to="/lpd/$id"
+                        params={{ id: row.id_lpd }}
+                        className="text-primary text-sm font-medium hover:underline"
+                      >
+                        Detail
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
