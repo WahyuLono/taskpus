@@ -154,8 +154,8 @@ function LpdListPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-2 items-center">
-          <div className="relative">
+        <div className="flex gap-2 items-center w-full md:w-auto">
+          <div className="relative flex-1 md:flex-none">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 !text-[18px] text-on-surface-variant">
               search
             </span>
@@ -163,7 +163,7 @@ function LpdListPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Cari nomor surat…"
-              className="pl-9 w-64"
+              className="pl-9 w-full md:w-64"
             />
           </div>
           {me?.role_user === "Admin" && (
@@ -224,7 +224,7 @@ function LpdListPage() {
                       {me?.role_user === "Admin" &&
                         row.status_lpd === "Belum" &&
                         isPastH7(row.tgl_kegiatan) && <ReminderButton row={row} />}
-                        <Link
+                      <Link
                         to="/lpd/$id"
                         params={{ id: row.id_lpd }}
                         className="text-primary text-sm font-medium hover:underline"
