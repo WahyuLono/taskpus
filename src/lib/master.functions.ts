@@ -66,7 +66,7 @@ export const listAllUsers = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("master_user")
       .select(
-        "id_user, nip, username, nama, email_internal, jabatan, unit, status_kepegawaian, role_user, is_kepala_uptd, id_golongan",
+        "id_user, nip, username, nama, email_internal, jabatan, unit, status_kepegawaian, role_user, is_kepala_uptd, id_golongan, no_wa",
       )
       .order("nama");
     if (error) throw new Error(error.message);

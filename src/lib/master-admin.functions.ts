@@ -16,6 +16,18 @@ const NipSchema = z
   .trim()
   .regex(/^[0-9]{6,30}$/, "NIP harus 6-30 digit angka");
 
+const WaSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9]+$/, "No. WhatsApp hanya boleh berisi angka")
+  .refine(
+    (v) => v.startsWith("08") || v.startsWith("628"),
+    "No. WhatsApp harus diawali 08 atau 628",
+  )
+  .refine((v) => v.length >= 9 && v.length <= 15, "No. WhatsApp harus 9-15 digit");
+
+const WaField = z.union([WaSchema, z.literal("")]).optional().nullable();
+
 const CreateUserSchema = z
   .object({
     nip: z.union([NipSchema, z.literal("")]).optional().nullable(),
@@ -28,11 +40,13 @@ const CreateUserSchema = z
     id_golongan: z.number().int().positive().nullable(),
     jabatan: z.string().trim().max(120).nullable(),
     unit: z.string().trim().max(120).nullable(),
+    no_wa: WaField,
   })
   .transform((d) => ({
     ...d,
     nip: d.nip ? d.nip : null,
     username: d.username ? d.username : null,
+    no_wa: d.no_wa ? d.no_wa : null,
   }))
   .superRefine((d, ctx) => {
     if (d.status_kepegawaian === "ASN") {
@@ -128,6 +142,7 @@ export const createUser = createServerFn({ method: "POST" })
       id_golongan: data.id_golongan,
       jabatan: data.jabatan,
       unit: data.unit,
+      no_wa: data.no_wa,
     });
     if (insErr) {
       await supabaseAdmin.auth.admin.deleteUser(created.user.id);
@@ -212,6 +227,7 @@ const UpdateUserSchema = z.object({
   id_golongan: z.number().int().positive().nullable(),
   jabatan: z.string().trim().max(120).nullable(),
   unit: z.string().trim().max(120).nullable(),
+  no_wa: WaField,
 });
 
 export const updateUser = createServerFn({ method: "POST" })
@@ -247,6 +263,7 @@ export const updateUser = createServerFn({ method: "POST" })
       jabatan: string | null;
       unit: string | null;
       updated_at: string;
+      no_wa: string | null;
       status_kepegawaian?: "ASN" | "NON ASN";
       nip?: string | null;
       id_golongan?: number | null;
@@ -256,6 +273,7 @@ export const updateUser = createServerFn({ method: "POST" })
       is_kepala_uptd: data.is_kepala_uptd,
       jabatan: data.jabatan,
       unit: data.unit,
+      no_wa: data.no_wa ? data.no_wa : null,
       updated_at: new Date().toISOString(),
     };
 
