@@ -22,6 +22,7 @@ import { Route as PrintLpdIdRouteImport } from './routes/print.lpd.$id'
 import { Route as PrintLaporanIdRouteImport } from './routes/print.laporan.$id'
 import { Route as AuthenticatedMasterUserRouteImport } from './routes/_authenticated/master.user'
 import { Route as AuthenticatedMasterTempatRouteImport } from './routes/_authenticated/master.tempat'
+import { Route as AuthenticatedMasterSettingNotifikasiRouteImport } from './routes/_authenticated/master.setting-notifikasi'
 import { Route as AuthenticatedMasterRangkaRouteImport } from './routes/_authenticated/master.rangka'
 import { Route as AuthenticatedMasterNomorSuratRouteImport } from './routes/_authenticated/master.nomor-surat'
 import { Route as AuthenticatedMasterGolonganRouteImport } from './routes/_authenticated/master.golongan'
@@ -95,6 +96,12 @@ const AuthenticatedMasterTempatRoute =
     path: '/master/tempat',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedMasterSettingNotifikasiRoute =
+  AuthenticatedMasterSettingNotifikasiRouteImport.update({
+    id: '/master/setting-notifikasi',
+    path: '/master/setting-notifikasi',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedMasterRangkaRoute =
   AuthenticatedMasterRangkaRouteImport.update({
     id: '/master/rangka',
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
+  '/master/setting-notifikasi': typeof AuthenticatedMasterSettingNotifikasiRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
   '/print/laporan/$id': typeof PrintLaporanIdRoute
@@ -161,6 +169,7 @@ export interface FileRoutesByTo {
   '/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
   '/master/rangka': typeof AuthenticatedMasterRangkaRoute
+  '/master/setting-notifikasi': typeof AuthenticatedMasterSettingNotifikasiRoute
   '/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/master/user': typeof AuthenticatedMasterUserRoute
   '/print/laporan/$id': typeof PrintLaporanIdRoute
@@ -183,6 +192,7 @@ export interface FileRoutesById {
   '/_authenticated/master/golongan': typeof AuthenticatedMasterGolonganRoute
   '/_authenticated/master/nomor-surat': typeof AuthenticatedMasterNomorSuratRoute
   '/_authenticated/master/rangka': typeof AuthenticatedMasterRangkaRoute
+  '/_authenticated/master/setting-notifikasi': typeof AuthenticatedMasterSettingNotifikasiRoute
   '/_authenticated/master/tempat': typeof AuthenticatedMasterTempatRoute
   '/_authenticated/master/user': typeof AuthenticatedMasterUserRoute
   '/print/laporan/$id': typeof PrintLaporanIdRoute
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/master/golongan'
     | '/master/nomor-surat'
     | '/master/rangka'
+    | '/master/setting-notifikasi'
     | '/master/tempat'
     | '/master/user'
     | '/print/laporan/$id'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/master/golongan'
     | '/master/nomor-surat'
     | '/master/rangka'
+    | '/master/setting-notifikasi'
     | '/master/tempat'
     | '/master/user'
     | '/print/laporan/$id'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
     | '/_authenticated/master/golongan'
     | '/_authenticated/master/nomor-surat'
     | '/_authenticated/master/rangka'
+    | '/_authenticated/master/setting-notifikasi'
     | '/_authenticated/master/tempat'
     | '/_authenticated/master/user'
     | '/print/laporan/$id'
@@ -356,6 +369,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMasterTempatRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/master/setting-notifikasi': {
+      id: '/_authenticated/master/setting-notifikasi'
+      path: '/master/setting-notifikasi'
+      fullPath: '/master/setting-notifikasi'
+      preLoaderRoute: typeof AuthenticatedMasterSettingNotifikasiRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/master/rangka': {
       id: '/_authenticated/master/rangka'
       path: '/master/rangka'
@@ -411,6 +431,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMasterGolonganRoute: typeof AuthenticatedMasterGolonganRoute
   AuthenticatedMasterNomorSuratRoute: typeof AuthenticatedMasterNomorSuratRoute
   AuthenticatedMasterRangkaRoute: typeof AuthenticatedMasterRangkaRoute
+  AuthenticatedMasterSettingNotifikasiRoute: typeof AuthenticatedMasterSettingNotifikasiRoute
   AuthenticatedMasterTempatRoute: typeof AuthenticatedMasterTempatRoute
   AuthenticatedMasterUserRoute: typeof AuthenticatedMasterUserRoute
   AuthenticatedLpdIndexRoute: typeof AuthenticatedLpdIndexRoute
@@ -428,6 +449,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMasterGolonganRoute: AuthenticatedMasterGolonganRoute,
   AuthenticatedMasterNomorSuratRoute: AuthenticatedMasterNomorSuratRoute,
   AuthenticatedMasterRangkaRoute: AuthenticatedMasterRangkaRoute,
+  AuthenticatedMasterSettingNotifikasiRoute:
+    AuthenticatedMasterSettingNotifikasiRoute,
   AuthenticatedMasterTempatRoute: AuthenticatedMasterTempatRoute,
   AuthenticatedMasterUserRoute: AuthenticatedMasterUserRoute,
   AuthenticatedLpdIndexRoute: AuthenticatedLpdIndexRoute,
