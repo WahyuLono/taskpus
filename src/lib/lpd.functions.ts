@@ -50,7 +50,8 @@ export const listLpd = createServerFn({ method: "GET" })
         `id_lpd, no_surat, no_surat_slug, jenis_perjadin, tgl_kegiatan, tgl_selesai, lama_hari, status_lpd, created_at,
          master_rangka:id_rangka(nama_rangka),
          master_tempat:id_tempat(nama_tempat),
-         kepala:id_kepala(nama, jabatan)`,
+         kepala:id_kepala(nama, jabatan),
+         detail_petugas(master_user:id_user_petugas(nama, username, no_wa))`,
         { count: "exact" },
       )
       .is("deleted_at", null)
