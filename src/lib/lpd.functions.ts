@@ -127,14 +127,41 @@ export const submitLaporan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SubmitLaporanSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: lpd, error: fetchErr } = await supabase
       .from("transaksi_lpd")
-      .select("id_lpd, status_lpd, approval_status")
+      .select("id_lpd, status_lpd, approval_status, tgl_selesai")
       .eq("id_lpd", data.id)
       .maybeSingle();
     if (fetchErr) throw new Error(fetchErr.message);
     if (!lpd) throw new Error("LPD tidak ditemukan");
+
+    // Hanya petugas yang ditugaskan pada SPT ini yang boleh mengisi & mengirim.
+    const { data: assigned, error: assignErr } = await supabase
+      .from("detail_petugas")
+      .select("id_detail")
+      .eq("id_lpd", data.id)
+      .eq("id_user_petugas", userId)
+      .maybeSingle();
+    if (assignErr) throw new Error(assignErr.message);
+    if (!assigned) {
+      throw new Error(
+        "Hanya petugas yang ditugaskan pada surat tugas ini yang dapat mengisi dan mengirim LPD.",
+      );
+    }
+
+    // Pengisian dibuka mulai tanggal selesai kegiatan (acuan waktu Asia/Jakarta).
+    const todayJkt = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Jakarta",
+    });
+    const tglSelesai = String(lpd.tgl_selesai ?? "").slice(0, 10);
+    if (tglSelesai && todayJkt < tglSelesai) {
+      const [y, m, d] = tglSelesai.split("-");
+      throw new Error(
+        `Pengisian LPD dibuka mulai ${d}-${m}-${y} (setelah kegiatan selesai).`,
+      );
+    }
+
     if (lpd.status_lpd === "Batal") throw new Error("LPD telah dibatalkan");
     if (
       lpd.approval_status === "Menunggu" ||
@@ -144,6 +171,7 @@ export const submitLaporan = createServerFn({ method: "POST" })
         "Laporan sedang menunggu persetujuan atau sudah disetujui — tidak dapat diubah.",
       );
     }
+
 
     const { error: updErr } = await supabase
       .from("transaksi_lpd")
