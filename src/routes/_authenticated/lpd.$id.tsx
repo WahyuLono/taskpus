@@ -537,10 +537,12 @@ function LaporanSection({
   lpd,
   id,
   petugasCount,
+  isPetugas,
 }: {
   lpd: any;
   id: string;
   petugasCount: number;
+  isPetugas: boolean;
 }) {
   if (lpd.status_lpd === "Batal") {
     return (
@@ -556,9 +558,49 @@ function LaporanSection({
   if (lpd.approval_status === "Menunggu" || lpd.approval_status === "Disetujui") {
     return <LaporanReadonly lpd={lpd} petugasCount={petugasCount} />;
   }
+  // Hanya petugas yang ditugaskan boleh mengisi laporan (Admin: baca-saja)
+  if (!isPetugas) {
+    return (
+      <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-2">
+        <h2 className="font-semibold text-on-surface">
+          Laporan Hasil Pelaksanaan Tugas
+        </h2>
+        <p className="text-sm text-on-surface-variant">
+          Pengisian laporan hanya dapat dilakukan oleh petugas yang ditugaskan pada
+          surat tugas ini. Anda dapat melihat dan meninjau laporan setelah petugas
+          mengirimkannya untuk persetujuan.
+        </p>
+      </section>
+    );
+  }
+  // Belum boleh mengisi sebelum kegiatan selesai
+  if (!isPengisianDibuka(lpd.tgl_selesai)) {
+    return (
+      <section className="bg-card rounded-xl border border-outline-variant shadow-card p-6 space-y-2">
+        <h2 className="font-semibold text-on-surface">
+          Laporan Hasil Pelaksanaan Tugas
+        </h2>
+        <p className="text-sm text-on-surface-variant">
+          Pengisian LPD dibuka mulai{" "}
+          <strong className="text-on-surface">{formatDate(lpd.tgl_selesai)}</strong>{" "}
+          (setelah kegiatan selesai). Silakan kembali pada tanggal tersebut.
+        </p>
+      </section>
+    );
+  }
   // Draft (new) or Ditolak (revision) → editable form, pre-filled if data exists
   return <LaporanFormView id={id} lpd={lpd} petugasCount={petugasCount} />;
 }
+
+/** Pengisian dibuka mulai tanggal selesai kegiatan (acuan waktu Asia/Jakarta). */
+function isPengisianDibuka(tglSelesai?: string | null) {
+  if (!tglSelesai) return true;
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jakarta",
+  });
+  return today >= String(tglSelesai).slice(0, 10);
+}
+
 
 // ----- Locked auto-field row -----
 function LockedRow({ label, value }: { label: string; value: string }) {
