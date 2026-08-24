@@ -263,7 +263,12 @@ function LpdDetailPage() {
       </section>
 
       {/* Laporan Hasil */}
-      <LaporanSection lpd={lpd} id={id} petugasCount={petugas.length} />
+      <LaporanSection
+        lpd={lpd}
+        id={id}
+        petugasCount={petugas.length}
+        isPetugas={isPetugasOfThisLpd}
+      />
     </div>
   );
 }
