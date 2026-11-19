@@ -11,7 +11,7 @@ import {
   addRangka,
   addTempat,
 } from "@/lib/master.functions";
-import { createLpd } from "@/lib/lpd.functions";
+import { createLpd, getLpdScheduleConflicts } from "@/lib/lpd.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ function BuatSPTPage() {
   const fetchKepala = useServerFn(listKepala);
   const fetchPetugas = useServerFn(listPetugas);
   const submitLpd = useServerFn(createLpd);
+  const fetchScheduleConflicts = useServerFn(getLpdScheduleConflicts);
   const submitRangka = useServerFn(addRangka);
   const submitTempat = useServerFn(addTempat);
 
@@ -51,6 +52,19 @@ function BuatSPTPage() {
   const [idKepala, setIdKepala] = useState<string>("");
   const [petugasIds, setPetugasIds] = useState<string[]>([]);
   const [petugasSearch, setPetugasSearch] = useState("");
+
+  const scheduleConflicts = useQuery({
+    queryKey: ["lpd-schedule-conflicts", tglKegiatan, tglSelesai, petugasIds],
+    queryFn: () =>
+      fetchScheduleConflicts({
+        data: {
+          tgl_kegiatan: tglKegiatan,
+          tgl_selesai: tglSelesai,
+          petugas_ids: petugasIds,
+        },
+      }),
+    enabled: !!me && me.role_user === "Admin" && !!tglKegiatan && !!tglSelesai && petugasIds.length > 0,
+  });
 
   const togglePetugas = (id: string) =>
     setPetugasIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -119,7 +133,18 @@ function BuatSPTPage() {
       : 0;
 
   const valid =
-    idRangka && idTempat && idKepala && petugasIds.length > 0 && jenis.trim().length >= 2;
+    idRangka &&
+    idTempat &&
+    idKepala &&
+    petugasIds.length > 0 &&
+    jenis.trim().length >= 2 &&
+    !scheduleConflicts.isLoading &&
+    !scheduleConflicts.isError &&
+    (scheduleConflicts.data?.length ?? 0) === 0;
+
+  const conflictUsers = new Set(
+    (scheduleConflicts.data ?? []).map((conflict) => conflict.id_user_petugas),
+  );
 
   const petugasAll = (petugas.data ?? []) as any[];
   const selectedPetugas = petugasAll.filter((p) => petugasIds.includes(p.id_user));
@@ -284,6 +309,9 @@ function BuatSPTPage() {
                       NIP {p.nip ?? "-"} • {p.jabatan ?? "—"}
                     </p>
                   </div>
+                  {conflictUsers.has(p.id_user) && (
+                    <span className="text-xs font-medium text-destructive">Jadwal bentrok</span>
+                  )}
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
                     {p.status_kepegawaian}
                   </span>
@@ -294,6 +322,28 @@ function BuatSPTPage() {
             <p className="mt-2 text-[11px] text-on-surface-variant">
               Ketik nama atau NIP untuk mencari petugas.
             </p>
+          )}
+          {scheduleConflicts.isLoading && (
+            <p className="mt-3 text-sm text-on-surface-variant">Memeriksa jadwal petugas…</p>
+          )}
+          {scheduleConflicts.isError && (
+            <p className="mt-3 text-sm text-destructive">
+              Jadwal belum dapat diverifikasi. Periksa koneksi lalu coba kembali sebelum menyimpan.
+            </p>
+          )}
+          {(scheduleConflicts.data?.length ?? 0) > 0 && (
+            <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+              <p className="text-sm font-semibold text-destructive">
+                Petugas berikut memiliki jadwal yang bertumpang tindih:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-on-surface">
+                {scheduleConflicts.data?.map((conflict) => (
+                  <li key={`${conflict.id_user_petugas}-${conflict.no_surat}`}>
+                    {conflict.nama} — SPT {conflict.no_surat} ({conflict.tgl_kegiatan} s.d. {conflict.tgl_selesai})
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </Section>
       </div>
@@ -310,7 +360,7 @@ function BuatSPTPage() {
           <Button
             type="submit"
             className="w-full h-11 mt-5"
-            disabled={!valid || submit.isPending}
+            disabled={!valid || submit.isPending || scheduleConflicts.isFetching}
           >
             {submit.isPending ? "Memproses…" : "Buat SPT"}
           </Button>

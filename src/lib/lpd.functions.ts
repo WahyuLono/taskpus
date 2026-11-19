@@ -280,6 +280,30 @@ const CreateLpdSchema = z.object({
   petugas_ids: z.array(z.string().uuid()).min(1).max(20),
 });
 
+const LpdScheduleConflictsSchema = z.object({
+  tgl_kegiatan: z.string(),
+  tgl_selesai: z.string(),
+  petugas_ids: z.array(z.string().uuid()).min(1).max(20),
+  exclude_id: z.string().uuid().optional(),
+});
+
+export const getLpdScheduleConflicts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => LpdScheduleConflictsSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: conflicts, error } = await context.supabase.rpc(
+      "get_lpd_schedule_conflicts",
+      {
+        p_tgl_kegiatan: data.tgl_kegiatan,
+        p_tgl_selesai: data.tgl_selesai,
+        p_petugas_ids: data.petugas_ids,
+        ...(data.exclude_id ? { p_exclude_id: data.exclude_id } : {}),
+      },
+    );
+    if (error) throw new Error(error.message);
+    return conflicts ?? [];
+  });
+
 export const createLpd = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => CreateLpdSchema.parse(d))
