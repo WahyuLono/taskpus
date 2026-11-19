@@ -394,6 +394,21 @@ export type Database = {
         Returns: Json
       }
       get_db_size: { Args: never; Returns: number }
+      get_lpd_schedule_conflicts: {
+        Args: {
+          p_exclude_id?: string
+          p_petugas_ids: string[]
+          p_tgl_kegiatan: string
+          p_tgl_selesai: string
+        }
+        Returns: {
+          id_user_petugas: string
+          nama: string
+          no_surat: string
+          tgl_kegiatan: string
+          tgl_selesai: string
+        }[]
+      }
       get_storage_size: { Args: never; Returns: number }
       has_role: {
         Args: {
